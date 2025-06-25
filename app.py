@@ -112,14 +112,14 @@ if yesterday_file and current_file:
             top_change = ipot_df.nlargest(20, 'change')[['custcode','custname','change','current_currentbal']]
             top_value = ipot_df.nlargest(20, 'current_currentbal')[['custcode','custname','current_currentbal','change']]
 
-            # Rename for display (in place, or as a copy)
+            # Rename for display
             top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
             top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
-            
+
             st.write("#### Top 20 IPOT by Changes")
-            st.dataframe(add_separator(top_change, ['change', 'current_currentbal']), use_container_width=True, height=400)
-            st.write("#### Top 20 IPOT by Current Value")
-            st.dataframe(add_separator(top_value, ['current_currentbal', 'change']), use_container_width=True, height=400)
+            st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
+            st.write("#### Top 20 IPOT by Today's Value")
+            st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
 
         # ---------------------- TAB 3: WM RANK ----------------------
         with tab3:
@@ -127,14 +127,14 @@ if yesterday_file and current_file:
             top_change = wm_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
             top_value = wm_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
 
-            # Rename for display (in place, or as a copy)
+            # Rename for display
             top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
             top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
-            
+
             st.write("#### Top 20 WM by Changes")
-            st.dataframe(add_separator(top_change, ['change', 'current_currentbal']), use_container_width=True, height=400)
-            st.write("#### Top 20 WM by Current Value")
-            st.dataframe(add_separator(top_value, ['current_currentbal', 'change']), use_container_width=True, height=400)
+            st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
+            st.write("#### Top 20 WM by Today's Value")
+            st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
 
         # ---------------------- TAB 4: PRIVATE DEALING RANK ----------------------
         with tab4:
@@ -142,14 +142,14 @@ if yesterday_file and current_file:
             top_change = priv_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
             top_value = priv_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
 
-            # Rename for display (in place, or as a copy)
+            # Rename for display
             top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
             top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
-            
+
             st.write("#### Top 20 Private Dealing by Changes")
-            st.dataframe(add_separator(top_change, ['change', 'current_currentbal']), use_container_width=True, height=400)
-            st.write("#### Top 20 Private Dealing by Current Value")
-            st.dataframe(add_separator(top_value, ['current_currentbal', 'change']), use_container_width=True, height=400)
+            st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
+            st.write("#### Top 20 Private Dealing by Today's Value")
+            st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
 
 else:
     st.info("Please upload both files.")
