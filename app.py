@@ -193,7 +193,7 @@ if yesterday_file and current_file:
                 top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
                 st.dataframe(
                     add_separator(
-                        top_change[['custcode','custname','salesid','change',"Today's Value in IDR"] if name != "IPOT" else ['custcode','custname','change',"Today's Value in IDR"]],
+                        top_change[['custcode','custname','salesid','change',"Today's Value in IDR"] if name != "IPOT" else ['custcode','custname','salesid','change',"Today's Value in IDR"]],
                         ['change', "Today's Value in IDR"]
                     ),
                     use_container_width=True,
@@ -205,7 +205,7 @@ if yesterday_file and current_file:
                 bottom_change = bottom_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
                 st.dataframe(
                     add_separator(
-                        bottom_change[['custcode','custname','salesid','change',"Today's Value in IDR"] if name != "IPOT" else ['custcode','custname','change',"Today's Value in IDR"]],
+                        bottom_change[['custcode','custname','salesid','change',"Today's Value in IDR"] if name != "IPOT" else ['custcode','custname','salesid','change',"Today's Value in IDR"]],
                         ['change', "Today's Value in IDR"]
                     ),
                     use_container_width=True,
