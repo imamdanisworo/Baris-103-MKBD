@@ -62,17 +62,15 @@ if yesterday_file and current_file:
         # Append totals row
         final_result_with_total = pd.concat([final_result, pd.DataFrame([totals])], ignore_index=True)
         
-        # Format with thousand separators
-        styled_result = final_result_with_total.style.format({
-            'yesterday_currentbal': '{:,.0f}',
-            'current_currentbal': '{:,.0f}',
-            'change': '{:,.0f}'
-        })
-        
+        # Convert numbers to strings with thousand separators for display
+        display_df = final_result_with_total.copy()
+        for col in ['yesterday_currentbal', 'current_currentbal', 'change']:
+            display_df[col] = display_df[col].apply(lambda x: '{:,.0f}'.format(x) if pd.notnull(x) else '')
+
         st.write("### Balance Changes Table")
-        st.dataframe(styled_result, use_container_width=True)
+        st.dataframe(display_df, use_container_width=True)
         
-        # Download option (without style)
+        # Download option (raw numbers for Excel)
         csv = final_result_with_total.to_csv(index=False)
         st.download_button("Download Result as CSV", csv, "balance_changes.csv", "text/csv")
 else:
