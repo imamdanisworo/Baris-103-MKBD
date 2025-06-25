@@ -1,6 +1,14 @@
 import streamlit as st
 import pandas as pd
 
+def accounting_format(x):
+    if pd.isnull(x):
+        return ''
+    if x < 0:
+        return f"({abs(x):,.0f})"
+    else:
+        return f"{x:,.0f}"
+
 st.title("Client Balance Changes Comparison")
 
 yesterday_file = st.file_uploader("Upload YESTERDAY'S file", type=["csv"], key="yesterday")
@@ -48,14 +56,16 @@ if yesterday_file and current_file:
         }
         final_result_with_total = pd.concat([final_result, pd.DataFrame([totals])], ignore_index=True)
         
-        st.write("### Balance Changes Table (Sortable)")
-        st.dataframe(final_result_with_total, use_container_width=True)
-
-        # Download option with thousand separator formatting
-        download_df = final_result_with_total.copy()
+        # Format the number columns using accounting format
+        display_df = final_result_with_total.copy()
         for col in ['yesterday_currentbal', 'current_currentbal', 'change']:
-            download_df[col] = download_df[col].apply(lambda x: '{:,.0f}'.format(x) if pd.notnull(x) else '')
-        csv = download_df.to_csv(index=False)
-        st.download_button("Download Result as CSV (with separator)", csv, "balance_changes.csv", "text/csv")
+            display_df[col] = display_df[col].apply(accounting_format)
+        
+        st.write("### Balance Changes Table (Accounting Format)")
+        st.table(display_df)
+
+        # Download: CSV will keep raw numbers (sortable in Excel)
+        csv = final_result_with_total.to_csv(index=False)
+        st.download_button("Download Result as CSV", csv, "balance_changes.csv", "text/csv")
 else:
     st.info("Please upload both files.")
