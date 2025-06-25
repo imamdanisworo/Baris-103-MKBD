@@ -170,11 +170,15 @@ if yesterday_file and current_file:
         with tab2:
             ipot_df = df[ipot_mask]
             top_change = ipot_df.nlargest(20, 'change')[['custcode','custname','change','current_currentbal']]
+            bottom_change = ipot_df.nsmallest(20, 'change')[['custcode','custname','change','current_currentbal']]
             top_value = ipot_df.nlargest(20, 'current_currentbal')[['custcode','custname','current_currentbal','change']]
             top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            bottom_change = bottom_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
             top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
             st.write("#### Top 20 IPOT by Changes")
             st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
+            st.write("#### Bottom 20 IPOT by Changes")
+            st.dataframe(add_separator(bottom_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
             st.write("#### Top 20 IPOT by Today's Value")
             st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
 
@@ -182,11 +186,15 @@ if yesterday_file and current_file:
         with tab3:
             wm_df = df[wm_mask]
             top_change = wm_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
+            bottom_change = wm_df.nsmallest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
             top_value = wm_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
             top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            bottom_change = bottom_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
             top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
             st.write("#### Top 20 WM by Changes")
             st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
+            st.write("#### Bottom 20 WM by Changes")
+            st.dataframe(add_separator(bottom_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
             st.write("#### Top 20 WM by Today's Value")
             st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
 
@@ -194,11 +202,15 @@ if yesterday_file and current_file:
         with tab4:
             priv_df = df[priv_mask]
             top_change = priv_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
+            bottom_change = priv_df.nsmallest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
             top_value = priv_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
             top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            bottom_change = bottom_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
             top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
             st.write("#### Top 20 Private Dealing by Changes")
             st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
+            st.write("#### Bottom 20 Private Dealing by Changes")
+            st.dataframe(add_separator(bottom_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
             st.write("#### Top 20 Private Dealing by Today's Value")
             st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
 
@@ -206,12 +218,17 @@ if yesterday_file and current_file:
         with tab5:
             others_df = df[others_mask]
             top_change = others_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
+            bottom_change = others_df.nsmallest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
             top_value = others_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
             top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            bottom_change = bottom_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
             top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
             st.write("#### Top 20 Others by Changes")
             st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
+            st.write("#### Bottom 20 Others by Changes")
+            st.dataframe(add_separator(bottom_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
             st.write("#### Top 20 Others by Today's Value")
             st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
+
 else:
     st.info("Please upload both files.")
