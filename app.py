@@ -102,13 +102,13 @@ if yesterday_file and current_file:
         # ---------------------- TAB 1: ANALYSIS SUMMARY ----------------------
         with tab1:
             df = final_result.copy()
-            # Define group masks
+            # Define group masks (NEW LOGIC)
             ipot_mask = df['salesid'] == 'IPOT'
             wm_mask = df['salesid'].str.startswith('WM', na=False)
-            priv_mask = (df['salesid'] == 'Private Dealing') | (df['salesid'].str.startswith('RT', na=False))
+            priv_mask = (df['salesid'] == 'Private Dealing') | (df['salesid'] == 'RT2')
             others_mask = ~(ipot_mask | wm_mask | priv_mask)
 
-            # Group sums (same as before)
+            # Group sums
             total_yesterday = df['yesterday_currentbal'].sum()
             total_current = df['current_currentbal'].sum()
             total_change = df['change'].sum()
@@ -213,6 +213,5 @@ if yesterday_file and current_file:
             st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
             st.write("#### Top 20 Others by Today's Value")
             st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
-
 else:
     st.info("Please upload both files.")
