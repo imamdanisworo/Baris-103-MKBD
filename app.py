@@ -91,40 +91,73 @@ if yesterday_file and current_file:
 
         # === MULTI TAB ANALYSIS & RANKING ===
         st.write("---")
-        tab1, tab2, tab3, tab4 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "Analysis",
             "Rank IPOT",
             "Rank WM",
-            "Rank Private Dealing"
+            "Rank Private Dealing",
+            "Rank Others"
         ])
 
         # ---------------------- TAB 1: ANALYSIS SUMMARY ----------------------
         with tab1:
             df = final_result.copy()
-            # Total
+            # Define group masks
+            ipot_mask = df['salesid'] == 'IPOT'
+            wm_mask = df['salesid'].str.startswith('WM', na=False)
+            priv_mask = (df['salesid'] == 'Private Dealing') | (df['salesid'].str.startswith('RT', na=False))
+            others_mask = ~(ipot_mask | wm_mask | priv_mask)
+
+            # Group sums (same as before)
             total_yesterday = df['yesterday_currentbal'].sum()
             total_current = df['current_currentbal'].sum()
             total_change = df['change'].sum()
-            # IPOT only
-            ipot_mask = df['salesid'] == 'IPOT'
+
             ipot_yesterday = df.loc[ipot_mask, 'yesterday_currentbal'].sum()
             ipot_current = df.loc[ipot_mask, 'current_currentbal'].sum()
             ipot_change = df.loc[ipot_mask, 'change'].sum()
-            # WM only
-            wm_mask = df['salesid'].str.startswith('WM', na=False)
+
             wm_yesterday = df.loc[wm_mask, 'yesterday_currentbal'].sum()
             wm_current = df.loc[wm_mask, 'current_currentbal'].sum()
             wm_change = df.loc[wm_mask, 'change'].sum()
-            # Private Dealing
-            priv_mask = (df['salesid'] == 'Private Dealing') | (df['salesid'].str.startswith('RT', na=False))
+
             priv_yesterday = df.loc[priv_mask, 'yesterday_currentbal'].sum()
             priv_current = df.loc[priv_mask, 'current_currentbal'].sum()
             priv_change = df.loc[priv_mask, 'change'].sum()
+
+            others_yesterday = df.loc[others_mask, 'yesterday_currentbal'].sum()
+            others_current = df.loc[others_mask, 'current_currentbal'].sum()
+            others_change = df.loc[others_mask, 'change'].sum()
+
             analysis_data = {
-                "Position": ["Total", "IPOT only", "WM only", "Private Dealing"],
-                "Yesterday": [total_yesterday, ipot_yesterday, wm_yesterday, priv_yesterday],
-                "Current": [total_current, ipot_current, wm_current, priv_current],
-                "Changes": [total_change, ipot_change, wm_change, priv_change]
+                "Position": [
+                    "Total",
+                    "IPOT",
+                    "WM",
+                    "Private Dealing",
+                    "Others"
+                ],
+                "Yesterday": [
+                    total_yesterday,
+                    ipot_yesterday,
+                    wm_yesterday,
+                    priv_yesterday,
+                    others_yesterday
+                ],
+                "Current": [
+                    total_current,
+                    ipot_current,
+                    wm_current,
+                    priv_current,
+                    others_current
+                ],
+                "Changes": [
+                    total_change,
+                    ipot_change,
+                    wm_change,
+                    priv_change,
+                    others_change
+                ]
             }
             analysis_df = pd.DataFrame(analysis_data)
             display_analysis = analysis_df.copy()
@@ -135,14 +168,11 @@ if yesterday_file and current_file:
 
         # ---------------------- TAB 2: IPOT RANK ----------------------
         with tab2:
-            ipot_df = df[df['salesid'] == 'IPOT']
+            ipot_df = df[ipot_mask]
             top_change = ipot_df.nlargest(20, 'change')[['custcode','custname','change','current_currentbal']]
             top_value = ipot_df.nlargest(20, 'current_currentbal')[['custcode','custname','current_currentbal','change']]
-
-            # Rename for display
             top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
             top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
-
             st.write("#### Top 20 IPOT by Changes")
             st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
             st.write("#### Top 20 IPOT by Today's Value")
@@ -150,14 +180,11 @@ if yesterday_file and current_file:
 
         # ---------------------- TAB 3: WM RANK ----------------------
         with tab3:
-            wm_df = df[df['salesid'].str.startswith('WM', na=False)]
+            wm_df = df[wm_mask]
             top_change = wm_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
             top_value = wm_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
-
-            # Rename for display
             top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
             top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
-
             st.write("#### Top 20 WM by Changes")
             st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
             st.write("#### Top 20 WM by Today's Value")
@@ -165,17 +192,27 @@ if yesterday_file and current_file:
 
         # ---------------------- TAB 4: PRIVATE DEALING RANK ----------------------
         with tab4:
-            priv_df = df[(df['salesid'] == 'Private Dealing') | (df['salesid'].str.startswith('RT', na=False))]
+            priv_df = df[priv_mask]
             top_change = priv_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
             top_value = priv_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
-
-            # Rename for display
             top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
             top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
-
             st.write("#### Top 20 Private Dealing by Changes")
             st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
             st.write("#### Top 20 Private Dealing by Today's Value")
             st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
+
+        # ---------------------- TAB 5: OTHERS RANK ----------------------
+        with tab5:
+            others_df = df[others_mask]
+            top_change = others_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
+            top_value = others_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
+            top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            st.write("#### Top 20 Others by Changes")
+            st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
+            st.write("#### Top 20 Others by Today's Value")
+            st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
+
 else:
     st.info("Please upload both files.")
