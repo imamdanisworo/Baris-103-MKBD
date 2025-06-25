@@ -13,6 +13,24 @@ st.title("Client Balance Changes Comparison")
 yesterday_file = st.file_uploader("Upload YESTERDAY'S file", type=["csv"], key="yesterday")
 current_file = st.file_uploader("Upload CURRENT file", type=["csv"], key="current")
 
+# Handle file signature for re-processing only if file changed
+def file_signature(uploaded_file):
+    if uploaded_file is None:
+        return None
+    return (uploaded_file.name, uploaded_file.size, getattr(uploaded_file, 'last_modified', None))
+
+sig_yest = file_signature(yesterday_file)
+sig_curr = file_signature(current_file)
+
+# If either file signature changes, clear previous results
+if ('sig_yest' in st.session_state and st.session_state['sig_yest'] != sig_yest) or \
+   ('sig_curr' in st.session_state and st.session_state['sig_curr'] != sig_curr):
+    st.session_state.pop('final_result_with_total', None)
+    st.session_state.pop('final_result', None)
+
+st.session_state['sig_yest'] = sig_yest
+st.session_state['sig_curr'] = sig_curr
+
 if yesterday_file and current_file:
     if st.button("Generate Comparison Table"):
         # --- READ AND PREPARE DATA ---
@@ -55,6 +73,15 @@ if yesterday_file and current_file:
             'change': final_result['change'].sum()
         }
         final_result_with_total = pd.concat([final_result, pd.DataFrame([totals])], ignore_index=True)
+
+        # Store results in session_state
+        st.session_state['final_result'] = final_result
+        st.session_state['final_result_with_total'] = final_result_with_total
+
+    # Display tables/tabs from session_state if present
+    if 'final_result_with_total' in st.session_state:
+        final_result_with_total = st.session_state['final_result_with_total']
+        final_result = st.session_state['final_result']
 
         st.write("### Balance Changes Table (Sortable)")
         st.dataframe(final_result_with_total, use_container_width=True)
@@ -150,6 +177,5 @@ if yesterday_file and current_file:
             st.dataframe(add_separator(top_change, ['change', "Today's Value in IDR"]), use_container_width=True, height=400)
             st.write("#### Top 20 Private Dealing by Today's Value")
             st.dataframe(add_separator(top_value, ["Today's Value in IDR", 'change']), use_container_width=True, height=400)
-
 else:
     st.info("Please upload both files.")
