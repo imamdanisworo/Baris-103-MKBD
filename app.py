@@ -111,6 +111,11 @@ if yesterday_file and current_file:
             ipot_df = df[df['salesid'] == 'IPOT']
             top_change = ipot_df.nlargest(20, 'change')[['custcode','custname','change','current_currentbal']]
             top_value = ipot_df.nlargest(20, 'current_currentbal')[['custcode','custname','current_currentbal','change']]
+
+            # Rename for display (in place, or as a copy)
+            top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            
             st.write("#### Top 20 IPOT by Changes")
             st.dataframe(add_separator(top_change, ['change', 'current_currentbal']), use_container_width=True, height=400)
             st.write("#### Top 20 IPOT by Current Value")
@@ -121,6 +126,11 @@ if yesterday_file and current_file:
             wm_df = df[df['salesid'].str.startswith('WM', na=False)]
             top_change = wm_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
             top_value = wm_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
+
+            # Rename for display (in place, or as a copy)
+            top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            
             st.write("#### Top 20 WM by Changes")
             st.dataframe(add_separator(top_change, ['change', 'current_currentbal']), use_container_width=True, height=400)
             st.write("#### Top 20 WM by Current Value")
@@ -131,6 +141,11 @@ if yesterday_file and current_file:
             priv_df = df[(df['salesid'] == 'Private Dealing') | (df['salesid'].str.startswith('RT', na=False))]
             top_change = priv_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
             top_value = priv_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
+
+            # Rename for display (in place, or as a copy)
+            top_change = top_change.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            top_value = top_value.rename(columns={'current_currentbal': "Today's Value in IDR"})
+            
             st.write("#### Top 20 Private Dealing by Changes")
             st.dataframe(add_separator(top_change, ['change', 'current_currentbal']), use_container_width=True, height=400)
             st.write("#### Top 20 Private Dealing by Current Value")
