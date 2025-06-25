@@ -65,7 +65,7 @@ if yesterday_file and current_file:
         # Convert numbers to strings with thousand separators for display
         display_df = final_result_with_total.copy()
         for col in ['yesterday_currentbal', 'current_currentbal', 'change']:
-            display_df[col] = display_df[col].apply(lambda x: '{:,.0f}'.format(x) if pd.notnull(x) else '')
+            display_df[col] = display_df[col].apply(lambda x: '{:,.2f}'.format(x) if pd.notnull(x) else '')
 
         st.write("### Balance Changes Table")
         st.dataframe(display_df, use_container_width=True)
