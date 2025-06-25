@@ -1,6 +1,13 @@
 import streamlit as st
 import pandas as pd
 
+def add_separator(df, cols):
+    fmt_df = df.copy()
+    for col in cols:
+        if col in fmt_df.columns:
+            fmt_df[col] = fmt_df[col].apply(lambda x: '{:,.2f}'.format(x) if pd.notnull(x) else '')
+    return fmt_df
+
 st.title("Client Balance Changes Comparison")
 
 yesterday_file = st.file_uploader("Upload YESTERDAY'S file", type=["csv"], key="yesterday")
@@ -8,22 +15,22 @@ current_file = st.file_uploader("Upload CURRENT file", type=["csv"], key="curren
 
 if yesterday_file and current_file:
     if st.button("Generate Comparison Table"):
-        # === Comparison Table Code (SAME AS BEFORE, OMITTED FOR BREVITY) ===
+        # --- READ AND PREPARE DATA ---
         df_yest = pd.read_csv(yesterday_file, sep="|")
         df_curr = pd.read_csv(current_file, sep="|")
-        
+
         yest_sum = df_yest.groupby('custcode', as_index=False).agg({
             'custname': 'first',
             'salesid': 'first',
             'currentbal': 'sum'
         }).rename(columns={'currentbal': 'yesterday_currentbal'})
-        
+
         curr_sum = df_curr.groupby('custcode', as_index=False).agg({
             'custname': 'first',
             'salesid': 'first',
             'currentbal': 'sum'
         }).rename(columns={'currentbal': 'current_currentbal'})
-        
+
         result = pd.merge(
             yest_sum,
             curr_sum,
@@ -31,13 +38,13 @@ if yesterday_file and current_file:
             how='outer',
             suffixes=('_yest', '_curr')
         )
-        
+
         result['custname'] = result['custname_curr'].combine_first(result['custname_yest'])
         result['salesid'] = result['salesid_curr'].combine_first(result['salesid_yest'])
         result['yesterday_currentbal'] = result['yesterday_currentbal'].fillna(0)
         result['current_currentbal'] = result['current_currentbal'].fillna(0)
         result['change'] = result['current_currentbal'] - result['yesterday_currentbal']
-        
+
         final_result = result[['custcode', 'custname', 'salesid', 'yesterday_currentbal', 'current_currentbal', 'change']]
         totals = {
             'custcode': '',
@@ -102,26 +109,32 @@ if yesterday_file and current_file:
         # ---------------------- TAB 2: IPOT RANK ----------------------
         with tab2:
             ipot_df = df[df['salesid'] == 'IPOT']
+            top_change = ipot_df.nlargest(20, 'change')[['custcode','custname','change','current_currentbal']]
+            top_value = ipot_df.nlargest(20, 'current_currentbal')[['custcode','custname','current_currentbal','change']]
             st.write("#### Top 20 IPOT by Changes")
-            st.dataframe(ipot_df.nlargest(20, 'change')[['custcode','custname','change','current_currentbal']], use_container_width=True)
+            st.table(add_separator(top_change, ['change', 'current_currentbal']))
             st.write("#### Top 20 IPOT by Current Value")
-            st.dataframe(ipot_df.nlargest(20, 'current_currentbal')[['custcode','custname','current_currentbal','change']], use_container_width=True)
+            st.table(add_separator(top_value, ['current_currentbal', 'change']))
 
         # ---------------------- TAB 3: WM RANK ----------------------
         with tab3:
             wm_df = df[df['salesid'].str.startswith('WM', na=False)]
+            top_change = wm_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
+            top_value = wm_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
             st.write("#### Top 20 WM by Changes")
-            st.dataframe(wm_df.nlargest(20, 'change')[['custcode','custname','change','current_currentbal','salesid']], use_container_width=True)
+            st.table(add_separator(top_change, ['change', 'current_currentbal']))
             st.write("#### Top 20 WM by Current Value")
-            st.dataframe(wm_df.nlargest(20, 'current_currentbal')[['custcode','custname','current_currentbal','change','salesid']], use_container_width=True)
+            st.table(add_separator(top_value, ['current_currentbal', 'change']))
 
         # ---------------------- TAB 4: PRIVATE DEALING RANK ----------------------
         with tab4:
             priv_df = df[(df['salesid'] == 'Private Dealing') | (df['salesid'].str.startswith('RT', na=False))]
+            top_change = priv_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
+            top_value = priv_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
             st.write("#### Top 20 Private Dealing by Changes")
-            st.dataframe(priv_df.nlargest(20, 'change')[['custcode','custname','change','current_currentbal','salesid']], use_container_width=True)
+            st.table(add_separator(top_change, ['change', 'current_currentbal']))
             st.write("#### Top 20 Private Dealing by Current Value")
-            st.dataframe(priv_df.nlargest(20, 'current_currentbal')[['custcode','custname','current_currentbal','change','salesid']], use_container_width=True)
+            st.table(add_separator(top_value, ['current_currentbal', 'change']))
 
 else:
     st.info("Please upload both files.")
