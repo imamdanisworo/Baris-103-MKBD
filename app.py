@@ -105,8 +105,25 @@ if 'final' in st.session_state:
     lbl_c = f"Balance as of {extract_date_label(sig_c[0])}"
     colnames = {'bal_y': lbl_y, 'bal_c': lbl_c, 'change': 'Changes'}
 
-    df_main = st.session_state['final'].rename(columns=colnames)
-    total_df = st.session_state['total_row'].rename(columns=colnames)
+    df_main = st.session_state['final'].copy()
+
+    # Add Fee Type and Group columns
+    df_main['Fee Type'] = df_main['int_rate'].apply(
+        lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee'
+    )
+    def grp(s):
+        if s == 'IPOT': return 'IPOT'
+        if isinstance(s, str) and s.startswith('WM'): return 'WM'
+        if s in ['Private Dealing', 'RT2']: return 'Private Dealing'
+        return 'Others'
+    df_main['Group'] = df_main['salesid'].apply(grp)
+
+    df_main = df_main.rename(columns=colnames)
+    total_df = st.session_state['total_row'].copy()
+    total_df['Group'] = ''
+    total_df['Fee Type'] = ''
+    total_df = total_df.rename(columns=colnames)
+
     all_data = pd.concat([df_main, total_df], ignore_index=True)
 
     st.subheader("📋 All Clients Balance Comparison")
@@ -123,11 +140,6 @@ if 'final' in st.session_state:
     df['Fee Type'] = df['int_rate'].apply(
         lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee'
     )
-    def grp(s):
-        if s == 'IPOT': return 'IPOT'
-        if isinstance(s, str) and s.startswith('WM'): return 'WM'
-        if s in ['Private Dealing', 'RT2']: return 'Private Dealing'
-        return 'Others'
     df['Group'] = df['salesid'].apply(grp)
 
     def sum_table(d):
@@ -170,23 +182,14 @@ if 'final' in st.session_state:
                 unsafe_allow_html=True
             )
 
-        # ✅ Moved 5️⃣ and 6️⃣ inside the Analysis tab only
         def structure_grouping(df, is_positive=True):
             if is_positive:
                 data = df[df['change'] > 0].copy()
-                data['Group Range'] = pd.cut(
-                    data['change'],
-                    bins=[0, 500_000_000, 1_000_000_000, float('inf')],
-                    labels=["< 500 Mio", "500 Mio - 1 Bio", "> 1 Bio"]
-                )
+                data['Group Range'] = pd.cut(data['change'], bins=[0, 500_000_000, 1_000_000_000, float('inf')], labels=["< 500 Mio", "500 Mio - 1 Bio", "> 1 Bio"])
             else:
                 data = df[df['change'] < 0].copy()
                 data['abs_change'] = data['change'].abs()
-                data['Group Range'] = pd.cut(
-                    data['abs_change'],
-                    bins=[0, 500_000_000, 1_000_000_000, float('inf')],
-                    labels=["< 500 Mio", "500 Mio - 1 Bio", "> 1 Bio"]
-                )
+                data['Group Range'] = pd.cut(data['abs_change'], bins=[0, 500_000_000, 1_000_000_000, float('inf')], labels=["< 500 Mio", "500 Mio - 1 Bio", "> 1 Bio"])
             summary = data.groupby('Group Range', observed=True)['change'].agg(['count', 'sum']).reset_index()
             summary.columns = ['Range', 'Client Count', 'Total Changes']
             return summary
@@ -198,13 +201,9 @@ if 'final' in st.session_state:
             'Client Count': pos_tbl['Client Count'].sum(),
             'Total Changes': pos_tbl['Total Changes'].sum()
         }])
-        pos_display = pd.concat([pos_tbl, pos_total], ignore_index=True)
-        styled_pos = add_separator(pos_display, ['Client Count', 'Total Changes'])
+        styled_pos = add_separator(pd.concat([pos_tbl, pos_total], ignore_index=True), ['Client Count', 'Total Changes'])
         colgroup_pos = get_colgroup_by_width(styled_pos, ['Client Count', 'Total Changes'])
-        st.markdown(
-            html_table(styled_pos, ['Client Count', 'Total Changes'], colgroup_pos),
-            unsafe_allow_html=True
-        )
+        st.markdown(html_table(styled_pos, ['Client Count', 'Total Changes'], colgroup_pos), unsafe_allow_html=True)
 
         st.markdown("#### 6️⃣ Clients with Negative Changes by Range")
         neg_tbl = structure_grouping(df, is_positive=False)
@@ -213,15 +212,10 @@ if 'final' in st.session_state:
             'Client Count': neg_tbl['Client Count'].sum(),
             'Total Changes': neg_tbl['Total Changes'].sum()
         }])
-        neg_display = pd.concat([neg_tbl, neg_total], ignore_index=True)
-        styled_neg = add_separator(neg_display, ['Client Count', 'Total Changes'])
+        styled_neg = add_separator(pd.concat([neg_tbl, neg_total], ignore_index=True), ['Client Count', 'Total Changes'])
         colgroup_neg = get_colgroup_by_width(styled_neg, ['Client Count', 'Total Changes'])
-        st.markdown(
-            html_table(styled_neg, ['Client Count', 'Total Changes'], colgroup_neg),
-            unsafe_allow_html=True
-        )
+        st.markdown(html_table(styled_neg, ['Client Count', 'Total Changes'], colgroup_neg), unsafe_allow_html=True)
 
-    # 🎯 Ranking tabs (unchanged except removed 5️⃣/6️⃣ from inside here)
     for tab, group in zip(rank_tabs, ['IPOT', 'WM', 'Private Dealing', 'Others']):
         with tab:
             sub = df[df['Group'] == group]
@@ -231,12 +225,8 @@ if 'final' in st.session_state:
                 ("Top 20 by Today Value", sub.nlargest(20, 'bal_c')),
             ]
             colgroup = get_colgroup_by_width(sub, list(colnames.values()))
-
             for title, df_subset in tables:
                 st.markdown(f"#### {title}")
                 display = df_subset[['custcode', 'custname', 'salesid', 'change', 'bal_c']].rename(columns=colnames)
                 styled = add_separator(display, list(colnames.values()))
-                st.markdown(
-                    html_table(styled, list(colnames.values()), colgroup),
-                    unsafe_allow_html=True
-                )
+                st.markdown(html_table(styled, list(colnames.values()), colgroup), unsafe_allow_html=True)
