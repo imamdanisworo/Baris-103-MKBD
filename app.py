@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import re
 from datetime import datetime
 
 def add_separator(df, cols):
@@ -11,12 +12,12 @@ def add_separator(df, cols):
     return fmt_df
 
 def extract_date_label(filename):
-    try:
-        basename = os.path.splitext(filename)[0]
-        parsed = datetime.strptime(basename, "%d%m%y")
-        return parsed.strftime("%d-%b-%Y")
-    except Exception:
-        return filename
+    match = re.search(r'(\d{4})-(\d{2})-(\d{2})', filename)
+    if match:
+        year, month, day = match.groups()
+        date = datetime(int(year), int(month), int(day))
+        return date.strftime("%d %b %Y")
+    return filename
 
 st.set_page_config(page_title="Client Balance Comparison", layout="wide")
 
@@ -95,7 +96,7 @@ if yesterday_file and current_file:
         final_result_with_total = st.session_state['final_result_with_total']
         final_result = st.session_state['final_result']
 
-        # Dynamic column labels
+        # Dynamic column labels from filenames
         yesterday_label = extract_date_label(sig_yest[0]) if sig_yest else "Yesterday"
         today_label = extract_date_label(sig_curr[0]) if sig_curr else "Today"
         col_rename = {
