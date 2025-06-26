@@ -28,7 +28,6 @@ def style_df(df, numeric_cols):
     ])
 
 st.set_page_config(page_title="Client Balance Comparison", layout="wide")
-
 st.markdown("# 📊 Client Balance Changes & Rankings")
 st.info("**Step 1:** Upload yesterday's and today's files (CSV, pipe delimited).<br>**Step 2:** Click 'Generate Comparison Table'.<br>**Step 3:** Browse tabs for insights & rankings.", icon="ℹ️")
 st.divider()
@@ -98,8 +97,6 @@ if yesterday_file and current_file:
             st.session_state['final_result'] = final_result
             st.session_state['final_result_with_total'] = final_result_with_total
 
-        st.success("Data comparison and rankings are ready! Browse the tabs below for results.")
-
     if 'final_result_with_total' in st.session_state:
         final_result_with_total = st.session_state['final_result_with_total']
         final_result = st.session_state['final_result']
@@ -113,11 +110,10 @@ if yesterday_file and current_file:
         }
         numeric_cols = list(col_rename.values())
 
-        # ---------- MAIN TABLE ----------
         st.markdown("### 🗂️ All Clients — Balance Change Table")
         main_table = final_result_with_total.rename(columns=col_rename)
         styled = style_df(add_separator(main_table, numeric_cols), numeric_cols)
-        st.dataframe(styled, use_container_width=True)
+        st.write(styled, use_container_width=True)
         csv = main_table.to_csv(index=False)
         st.download_button("⬇️ Download Result as CSV", csv, "balance_changes.csv", "text/csv")
 
@@ -184,7 +180,7 @@ if yesterday_file and current_file:
             ):
                 st.markdown(f"#### {title}")
                 styled = style_df(add_separator(summary_func().rename(columns=col_rename), numeric_cols), numeric_cols)
-                st.dataframe(styled, use_container_width=True)
+                st.write(styled, use_container_width=True)
 
         masks = {
             "IPOT": df['salesid'] == 'IPOT',
@@ -205,6 +201,6 @@ if yesterday_file and current_file:
                     cols = ['custcode','custname','salesid','change','current_currentbal'] if 'Value' not in label else ['custcode','custname','salesid','current_currentbal','change']
                     df_out = data_func(group_df)[cols].rename(columns=col_rename)
                     styled = style_df(add_separator(df_out, numeric_cols), numeric_cols)
-                    st.dataframe(styled, use_container_width=True, height=400)
+                    st.write(styled, use_container_width=True, height=400)
 else:
     st.info("Please upload both files to begin.")
