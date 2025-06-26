@@ -193,7 +193,13 @@ if 'final' in st.session_state:
 
         st.markdown("#### 5️⃣ Clients with Positive Changes by Range")
         pos_tbl = structure_grouping(df, is_positive=True)
-        styled_pos = add_separator(pos_tbl, ['Client Count', 'Total Changes'])
+        pos_total = pd.DataFrame([{
+            'Range': 'Total',
+            'Client Count': pos_tbl['Client Count'].sum(),
+            'Total Changes': pos_tbl['Total Changes'].sum()
+        }])
+        pos_display = pd.concat([pos_tbl, pos_total], ignore_index=True)
+        styled_pos = add_separator(pos_display, ['Client Count', 'Total Changes'])
         colgroup_pos = get_colgroup_by_width(styled_pos, ['Client Count', 'Total Changes'])
         st.markdown(
             html_table(styled_pos, ['Client Count', 'Total Changes'], colgroup_pos),
@@ -202,7 +208,13 @@ if 'final' in st.session_state:
 
         st.markdown("#### 6️⃣ Clients with Negative Changes by Range")
         neg_tbl = structure_grouping(df, is_positive=False)
-        styled_neg = add_separator(neg_tbl, ['Client Count', 'Total Changes'])
+        neg_total = pd.DataFrame([{
+            'Range': 'Total',
+            'Client Count': neg_tbl['Client Count'].sum(),
+            'Total Changes': neg_tbl['Total Changes'].sum()
+        }])
+        neg_display = pd.concat([neg_tbl, neg_total], ignore_index=True)
+        styled_neg = add_separator(neg_display, ['Client Count', 'Total Changes'])
         colgroup_neg = get_colgroup_by_width(styled_neg, ['Client Count', 'Total Changes'])
         st.markdown(
             html_table(styled_neg, ['Client Count', 'Total Changes'], colgroup_neg),
