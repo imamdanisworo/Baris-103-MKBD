@@ -131,13 +131,18 @@ if 'final_result_with_total' in st.session_state:
         return d.groupby('Group', as_index=False)[['yesterday_currentbal','current_currentbal','change']].sum()
 
     with tab1:
+        st.markdown("### 🧮 Analysis Tables")
         df1 = sum_table(df[df['Group'].isin(['IPOT','WM','Others'])]).rename(columns=colnames)
         df2 = sum_table(df[df['Group'] == 'Private Dealing']).rename(columns=colnames)
         df3 = total_only(df).rename(columns=colnames)
         df4 = total_by_group_only(df).rename(columns=colnames)
-        st.markdown(html_table(add_separator(df1, list(colnames.values())) , list(colnames.values())), unsafe_allow_html=True)
+        st.markdown("#### 1️⃣ IPOT, WM, Others by Fee Type")
+        st.markdown(html_table(add_separator(df1, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+        st.markdown("#### 2️⃣ Private Dealing by Fee Type")
         st.markdown(html_table(add_separator(df2, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+        st.markdown("#### 3️⃣ Total Seluruh Piutang by Fee Type")
         st.markdown(html_table(add_separator(df3, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+        st.markdown("#### 4️⃣ Total by Group Only")
         st.markdown(html_table(add_separator(df4, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
 
     masks = {
