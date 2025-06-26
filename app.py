@@ -21,30 +21,21 @@ def html_table(df, numeric_cols, colgroup=""):
     rows = []
     for _, row in df.reset_index(drop=True).iterrows():
         r = "<tr>"
+        is_total = row.iloc[0] in ['Total','Grand Total']
         for col in df.columns:
             base = "text-align:right; white-space: nowrap;" if col in numeric_cols else "white-space: nowrap;"
-            if row.iloc[0] == 'Total' or row.iloc[0] == 'Grand Total':
-                style = base + " font-weight:bold; background-color:#f2f2f2;"
-            else:
-                style = base
+            style = base + (" font-weight:bold; background-color:#f2f2f2;" if is_total else "")
             r += f"<td style='{style} padding:4px 10px'>{row[col]}</td>"
         r += "</tr>"
         rows.append(r)
     headers = "".join(
-        f"<th style='text-align:left; padding:4px 10px; white-space: nowrap;'>{c}</th>"
-        for c in df.columns
+      f"<th style='text-align:left; padding:4px 10px; white-space: nowrap;'>{c}</th>"
+      for c in df.columns
     )
-    return (
-        f"<table style='border-collapse:collapse; font-size:14px'>"
-        f"{colgroup}<thead><tr>{headers}</tr></thead><tbody>"
-        + "".join(rows) + "</tbody></table>"
-    )
+    return f"<table style='border-collapse:collapse; font-size:14px'>{colgroup}<thead><tr>{headers}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
 
 def get_colgroup_by_width(df, numeric_cols):
-    widths = {
-        col: max(df[col].astype(str).map(len).max(), len(col)) * 8
-        for col in df.columns
-    }
+    widths = {col: max(df[col].astype(str).map(len).max(), len(col))*8 for col in df.columns}
     cg = "<colgroup>"
     for col in df.columns:
         cg += f"<col style='width:{widths[col]}px; white-space: nowrap;'>"
@@ -60,109 +51,79 @@ with col_y:
 with col_c:
     file_c = st.file_uploader("Upload TODAY'S file", type="csv", key="c")
 
-def sig(f): return (f.name, f.size, getattr(f, 'last_modified', None)) if f else None
+def sig(f): return (f.name, f.size, getattr(f,'last_modified',None)) if f else None
 sig_y, sig_c = sig(file_y), sig(file_c)
-
-if ('sig_y' in st.session_state and st.session_state['sig_y'] != sig_y) or \
-   ('sig_c' in st.session_state and st.session_state['sig_c'] != sig_c):
+if ('sig_y' in st.session_state and st.session_state['sig_y']!=sig_y) or \
+   ('sig_c' in st.session_state and st.session_state['sig_c']!=sig_c):
     st.session_state.pop('final', None)
-    st.session_state.pop('final_tot', None)
-
+    st.session_state.pop('total_row', None)
 st.session_state['sig_y'], st.session_state['sig_c'] = sig_y, sig_c
 
 if file_y and file_c and st.button("🚦 Generate Comparison Table"):
     with st.spinner("Processing..."):
         dy = pd.read_csv(file_y, sep="|")
         dc = pd.read_csv(file_c, sep="|")
-
-        y = dy.groupby('custcode', as_index=False)\
-              .agg({'custname':'first','salesid':'first','currentbal':'sum'})\
-              .rename(columns={'currentbal':'bal_y'})
-
+        y = dy.groupby('custcode', as_index=False).agg({'custname':'first','salesid':'first','currentbal':'sum'}).rename(columns={'currentbal':'bal_y'})
         c_agg = {'custname':'first','salesid':'first','currentbal':'sum'}
-        if 'int_rate' in dc: c_agg['int_rate'] = 'first'
-        if 'int_rate_daily' in dc: c_agg['int_rate_daily'] = 'first'
-
-        c = dc.groupby('custcode', as_index=False).agg(c_agg)\
-              .rename(columns={'currentbal':'bal_c'})
-
+        if 'int_rate' in dc: c_agg['int_rate']='first'
+        if 'int_rate_daily' in dc: c_agg['int_rate_daily']='first'
+        c = dc.groupby('custcode', as_index=False).agg(c_agg).rename(columns={'currentbal':'bal_c'})
         merged = pd.merge(y, c, on='custcode', how='outer')
-        merged['custname'] = merged['custname_y'].combine_first(merged['custname_x'])
-        merged['salesid'] = merged['salesid_y'].combine_first(merged['salesid_x'])
+        merged['custname']=merged['custname_y'].combine_first(merged['custname_x'])
+        merged['salesid']=merged['salesid_y'].combine_first(merged['salesid_x'])
         merged.fillna({'bal_y':0,'bal_c':0}, inplace=True)
-        merged['change'] = merged['bal_c'] - merged['bal_y']
-
+        merged['change']=merged['bal_c'] - merged['bal_y']
         for col in ('int_rate','int_rate_daily'):
-            if col not in merged: merged[col] = None
-
+            if col not in merged: merged[col]=None
         final = merged[['custcode','custname','salesid','bal_y','bal_c','change','int_rate','int_rate_daily']]
-        totals = {
+        total = {
             'custcode':'','custname':'Total','salesid':'',
             'bal_y': final['bal_y'].sum(),
             'bal_c': final['bal_c'].sum(),
             'change': final['change'].sum(),
-            'int_rate': None, 'int_rate_daily': None
+            'int_rate': None,'int_rate_daily':None
         }
         st.session_state['final'] = final
-        st.session_state['final_tot'] = pd.concat([final, pd.DataFrame([totals])], ignore_index=True)
+        st.session_state['total_row'] = pd.DataFrame([total])
 
-if 'final_tot' in st.session_state:
+if 'final' in st.session_state:
     lbl_y = f"Balance as of {extract_date_label(sig_y[0])}"
     lbl_c = f"Balance as of {extract_date_label(sig_c[0])}"
-    colnames = {'bal_y': lbl_y, 'bal_c': lbl_c, 'change': 'Changes'}
+    cols = {'bal_y':lbl_y, 'bal_c':lbl_c, 'change':'Changes'}
 
-    df_all = st.session_state['final'].copy()
-    df_total = pd.DataFrame([{
-        'custcode': '', 'custname': 'Total', 'salesid': '',
-        'bal_y': df_all['bal_y'].sum(),
-        'bal_c': df_all['bal_c'].sum(),
-        'change': df_all['change'].sum(),
-        'int_rate': None, 'int_rate_daily': None
-    }])
+    df = st.session_state['final']
+    total_df = st.session_state['total_row']
 
-    df_all_display = df_all.rename(columns=colnames)
-    total_display = df_total.rename(columns=colnames)
+    df_disp = df.rename(columns=cols)
+    total_disp = total_df.rename(columns=cols)
+
     st.subheader("📋 All Clients Balance Comparison")
-    st.dataframe(add_separator(df_all_display, list(colnames.values())), use_container_width=True)
-    st.markdown(html_table(add_separator(total_display, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+    st.dataframe(add_separator(df_disp, list(cols.values())), use_container_width=True)
+    # show total row with same width
+    cg = get_colgroup_by_width(pd.concat([df_disp, total_disp], ignore_index=True), list(cols.values()))
+    st.markdown(html_table(add_separator(total_disp, list(cols.values())), list(cols.values()), cg), unsafe_allow_html=True)
 
-    tab_analysis, *rank_tabs = st.tabs([
-        "📊 Analysis", "🥇 IPOT", "🥇 WM", "🥇 Private Dealing", "🥇 Others"
-    ])
+    tab_analysis, *rank_tabs = st.tabs(["📊 Analysis","🥇 IPOT","🥇 WM","🥇 Private Dealing","🥇 Others"])
 
-    df = st.session_state['final'].copy()
-    df['Fee Type'] = df['int_rate'].apply(
-        lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee'
-    )
+    df['Fee Type'] = df['int_rate'].apply(lambda x:'Normal Fee' if pd.notnull(x) and x>=0.36 else 'Special Fee')
     def grp(s):
-        if s == 'IPOT': return 'IPOT'
-        if isinstance(s, str) and s.startswith('WM'): return 'WM'
+        if s=='IPOT': return 'IPOT'
+        if isinstance(s,str) and s.startswith('WM'): return 'WM'
         if s in ['Private Dealing','RT2']: return 'Private Dealing'
         return 'Others'
     df['Group'] = df['salesid'].apply(grp)
 
     def sum_table(d):
         s = d.groupby(['Group','Fee Type'], as_index=False)[['bal_y','bal_c','change']].sum()
-        t = pd.DataFrame([{
-            'Group':'Total','Fee Type':'',
-            'bal_y':s.bal_y.sum(),'bal_c':s.bal_c.sum(),'change':s.change.sum()
-        }])
+        t = pd.DataFrame([{'Group':'Total','Fee Type':'','bal_y':s.bal_y.sum(),'bal_c':s.bal_c.sum(),'change':s.change.sum()}])
         return pd.concat([s,t], ignore_index=True)
-
     def total_only(d):
         t = d.groupby('Fee Type')[['bal_y','bal_c','change']].sum().reset_index()
-        g = pd.DataFrame([{
-            'Fee Type':'Grand Total',
-            'bal_y':t.bal_y.sum(),'bal_c':t.bal_c.sum(),'change':t.change.sum()
-        }])
+        g = pd.DataFrame([{'Fee Type':'Grand Total','bal_y':t.bal_y.sum(),'bal_c':t.bal_c.sum(),'change':t.change.sum()}])
         return pd.concat([t,g], ignore_index=True)
-
     def total_by_group(d):
         s = d.groupby('Group', as_index=False)[['bal_y','bal_c','change']].sum()
-        g = pd.DataFrame([{
-            'Group':'Total',
-            'bal_y':s.bal_y.sum(),'bal_c':s.bal_c.sum(),'change':s.change.sum()
-        }])
+        g = pd.DataFrame([{'Group':'Total','bal_y':s.bal_y.sum(),'bal_c':s.bal_c.sum(),'change':s.change.sum()}])
         return pd.concat([s,g], ignore_index=True)
 
     with tab_analysis:
@@ -173,27 +134,23 @@ if 'final_tot' in st.session_state:
             ("4️⃣ Total by Group Only", total_by_group(df))
         ]:
             st.markdown(f"#### {title}")
-            display = tbl.rename(columns=colnames)
-            st.markdown(
-                html_table(add_separator(display, list(colnames.values())), list(colnames.values())),
-                unsafe_allow_html=True
-            )
+            disp = tbl.rename(columns=cols)
+            cg2 = get_colgroup_by_width(disp, list(cols.values()))
+            st.markdown(html_table(add_separator(disp, list(cols.values())), list(cols.values()), cg2),
+                        unsafe_allow_html=True)
 
     groups = ['IPOT','WM','Private Dealing','Others']
-    for tab, group in zip(rank_tabs, groups):
+    for tab, grp_name in zip(rank_tabs, groups):
         with tab:
-            sub = df[df['Group']==group]
+            sub = df[df['Group']==grp_name]
             for title, fn in [
-                ("Top 20 by Changes", lambda d: d.nlargest(20, 'change')),
-                ("Bottom 20 by Changes", lambda d: d.nsmallest(20, 'change')),
-                ("Top 20 by Today Value", lambda d: d.nlargest(20, 'bal_c')),
+                ("Top 20 by Changes", lambda d:d.nlargest(20,'change')),
+                ("Bottom 20 by Changes", lambda d:d.nsmallest(20,'change')),
+                ("Top 20 by Today Value", lambda d:d.nlargest(20,'bal_c'))
             ]:
                 st.markdown(f"#### {title}")
                 sel = fn(sub)
-                disp = sel[['custcode','custname','salesid','change','bal_c']].rename(columns=colnames)
-                cg = get_colgroup_by_width(disp, list(colnames.values()))
-                styled = add_separator(disp, list(colnames.values()))
-                st.markdown(
-                    html_table(styled, list(colnames.values()), cg),
-                    unsafe_allow_html=True
-                )
+                disp = sel[['custcode','custname','salesid','change','bal_c']].rename(columns=cols)
+                cg3 = get_colgroup_by_width(disp, list(cols.values()))
+                st.markdown(html_table(add_separator(disp, list(cols.values())), list(cols.values()), cg3),
+                            unsafe_allow_html=True)
