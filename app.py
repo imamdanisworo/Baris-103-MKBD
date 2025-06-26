@@ -108,7 +108,11 @@ if yesterday_file and current_file:
         # ---------- MAIN TABLE ----------
         st.markdown("### 🗂️ All Clients — Balance Change Table")
         main_table = final_result_with_total.rename(columns=col_rename)
-        st.dataframe(main_table, use_container_width=True)
+        st.data_editor(
+            add_separator(main_table, list(col_rename.values())),
+            column_config={col: st.column_config.Column(width="fit-content", alignment="right") for col in col_rename.values()},
+            hide_index=True
+        )
         csv = main_table.to_csv(index=False)
         st.download_button("⬇️ Download Result as CSV", csv, "balance_changes.csv", "text/csv")
 
@@ -177,14 +181,16 @@ if yesterday_file and current_file:
             priv_summary = build_group_summary_v2(df_priv).rename(columns=col_rename)
             total_summary = build_total_summary_only(df).rename(columns=col_rename)
 
-            st.markdown("#### 1️⃣ IPOT, WM, and Others")
-            st.dataframe(add_separator(group_summary, list(col_rename.values())), use_container_width=True)
-
-            st.markdown("#### 2️⃣ Private Dealing Only")
-            st.dataframe(add_separator(priv_summary, list(col_rename.values())), use_container_width=True)
-
-            st.markdown("#### 3️⃣ Total Seluruh Piutang")
-            st.dataframe(add_separator(total_summary, list(col_rename.values())), use_container_width=True)
+            for title, table in zip(
+                ["1️⃣ IPOT, WM, and Others", "2️⃣ Private Dealing Only", "3️⃣ Total Seluruh Piutang"],
+                [group_summary, priv_summary, total_summary]
+            ):
+                st.markdown(f"#### {title}")
+                st.data_editor(
+                    add_separator(table, list(col_rename.values())),
+                    column_config={col: st.column_config.Column(width="fit-content", alignment="right") for col in col_rename.values()},
+                    hide_index=True
+                )
 
         # --------- RANKING TABS ---------
         masks = {
@@ -197,18 +203,20 @@ if yesterday_file and current_file:
         for tab, group_name in zip([tab2, tab3, tab4, tab5], masks.keys()):
             with tab:
                 group_df = df[masks[group_name]]
-
-                st.markdown(f"#### 🥇 Top 20 {group_name} by Changes")
-                top_change = group_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
-                st.dataframe(add_separator(top_change.rename(columns=col_rename), list(col_rename.values())), use_container_width=True, height=400)
-
-                st.markdown(f"#### 🥉 Bottom 20 {group_name} by Changes")
-                bottom_change = group_df.nsmallest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
-                st.dataframe(add_separator(bottom_change.rename(columns=col_rename), list(col_rename.values())), use_container_width=True, height=400)
-
-                st.markdown(f"#### 💰 Top 20 {group_name} by Today's Value")
-                top_value = group_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
-                st.dataframe(add_separator(top_value.rename(columns=col_rename), list(col_rename.values())), use_container_width=True, height=400)
-
+                for label, data_func in [
+                    (f"🥇 Top 20 {group_name} by Changes", lambda df: df.nlargest(20, 'change')),
+                    (f"🥉 Bottom 20 {group_name} by Changes", lambda df: df.nsmallest(20, 'change')),
+                    (f"💰 Top 20 {group_name} by Today's Value", lambda df: df.nlargest(20, 'current_currentbal'))
+                ]:
+                    st.markdown(f"#### {label}")
+                    cols = ['custcode','custname','salesid','change','current_currentbal'] if 'Value' not in label else ['custcode','custname','salesid','current_currentbal','change']
+                    df_out = data_func(group_df)[cols].rename(columns=col_rename)
+                    st.data_editor(
+                        add_separator(df_out, list(col_rename.values())),
+                        column_config={col: st.column_config.Column(width="fit-content", alignment="right") for col in col_rename.values()},
+                        hide_index=True,
+                        use_container_width=True,
+                        height=400
+                    )
 else:
     st.info("Please upload both files to begin.")
