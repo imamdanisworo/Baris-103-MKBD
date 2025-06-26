@@ -4,7 +4,6 @@ import re
 from datetime import datetime
 
 def add_separator(df, cols):
-    """Format numeric cols with thousand separators."""
     fmt = df.copy()
     for col in cols:
         if col in fmt.columns:
@@ -21,14 +20,18 @@ def extract_date_label(filename):
     return filename
 
 def html_table(df, numeric_cols, colgroup=""):
-    """Render HTML table with right-aligned numeric cols."""
     rows = []
     for _, row in df.reset_index(drop=True).iterrows():
+        is_total = str(row.iloc[0]).strip().upper() in ['TOTAL', 'GRAND TOTAL']
+        bg = "background-color:#f0f0f0;" if is_total else ""
+        font = "font-weight:bold;" if is_total else ""
         r = "<tr>"
         for col in df.columns:
-            style = ("text-align:right; white-space: nowrap;"
-                     if col in numeric_cols else "white-space: nowrap;")
-            r += f"<td style='{style} padding:4px 10px'>{row[col]}</td>"
+            style = (
+                f"{'text-align:right;' if col in numeric_cols else ''} "
+                f"{bg} {font} white-space: nowrap; padding:4px 10px;"
+            )
+            r += f"<td style='{style}'>{row[col]}</td>"
         r += "</tr>"
         rows.append(r)
     headers = "".join(
@@ -42,7 +45,6 @@ def html_table(df, numeric_cols, colgroup=""):
     )
 
 def get_colgroup_by_width(df, numeric_cols):
-    """Compute column widths based on content length."""
     widths = {
         col: max(df[col].astype(str).map(len).max(), len(col)) * 8
         for col in df.columns
@@ -65,7 +67,6 @@ with col_c:
 def sig(f): return (f.name, f.size, getattr(f, 'last_modified', None)) if f else None
 sig_y, sig_c = sig(file_y), sig(file_c)
 
-# Reset when files change
 if ('sig_y' in st.session_state and st.session_state['sig_y'] != sig_y) or \
    ('sig_c' in st.session_state and st.session_state['sig_c'] != sig_c):
     st.session_state.pop('final', None)
@@ -157,7 +158,6 @@ if 'final_tot' in st.session_state:
         }])
         return pd.concat([s,g], ignore_index=True)
 
-    # ANALYSIS TAB
     with tab_analysis:
         for title, tbl in [
             ("1️⃣ IPOT, WM, Others by Fee Type", sum_table(df[df['Group'].isin(['IPOT','WM','Others'])])),
@@ -166,14 +166,13 @@ if 'final_tot' in st.session_state:
             ("4️⃣ Total by Group Only", total_by_group(df))
         ]:
             st.markdown(f"#### {title}")
-            display = tbl.rename(columns=colnames)
+            d = tbl.rename(columns=colnames)
+            d_fmt = add_separator(d, list(colnames.values()))
             st.markdown(
-                html_table(add_separator(display, list(colnames.values())),
-                           list(colnames.values()), ""),
+                html_table(d_fmt, list(colnames.values()), get_colgroup_by_width(d, list(colnames.values()))),
                 unsafe_allow_html=True
             )
 
-    # RANK TABS
     groups = ['IPOT','WM','Private Dealing','Others']
     for tab, group in zip(rank_tabs, groups):
         with tab:
