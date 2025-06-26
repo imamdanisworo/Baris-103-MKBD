@@ -144,7 +144,7 @@ if 'final_result_with_total' in st.session_state:
     def total_by_group_only(d):
         s = d.groupby('Group', as_index=False)[['yesterday_currentbal','current_currentbal','change']].sum()
         total = pd.DataFrame([{
-            'Group': 'Total Seluruh Group',
+            'Group': 'Total',
             'yesterday_currentbal': s['yesterday_currentbal'].sum(),
             'current_currentbal': s['current_currentbal'].sum(),
             'change': s['change'].sum()
