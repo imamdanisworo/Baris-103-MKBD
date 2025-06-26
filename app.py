@@ -11,34 +11,25 @@ def add_separator(df, cols):
     return fmt_df
 
 def extract_date_label(filename):
-    match = re.search(r'(\\d{4})-(\\d{2})-(\\d{2})', filename)
+    match = re.search(r'(\d{4})-(\d{2})-(\d{2})', filename)
     if match:
         year, month, day = match.groups()
         return datetime(int(year), int(month), int(day)).strftime("%d %b %Y")
     return filename
 
-def html_table_with_colgroup(df, numeric_cols, colgroup):
+def html_table(df, numeric_cols):
     def make_html(row):
         html = "<tr>"
         for col in df.columns:
             val = row[col]
-            style = "text-align:right; white-space: nowrap;" if col in numeric_cols else "white-space: nowrap;"
+            style = "text-align:right; white-space:nowrap;" if col in numeric_cols else "white-space:nowrap;"
             html += f"<td style='{style} padding:4px 10px'>{val}</td>"
         html += "</tr>"
         return html
 
-    headers = "".join(f"<th style='text-align:left; padding:4px 10px; white-space: nowrap;'>{col}</th>" for col in df.columns)
-    rows = "\\n".join(make_html(row) for _, row in df.iterrows())
-    return f"<table style='border-collapse:collapse; font-size:14px'>{colgroup}<thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table>"
-
-# Fixed column widths (no wrapping)
-rank_tab_colgroup_nowrap = """<colgroup>
-<col style='width: 72px; white-space: nowrap;'>
-<col style='width: 72px; white-space: nowrap;'>
-<col style='width: 63px; white-space: nowrap;'>
-<col style='width: 63px; white-space: nowrap;'>
-<col style='width: 225px; white-space: nowrap;'>
-</colgroup>"""
+    headers = "".join(f"<th style='text-align:left; padding:4px 10px; white-space:nowrap;'>{col}</th>" for col in df.columns)
+    rows = "\n".join(make_html(row) for _, row in df.iterrows())
+    return f"<table style='border-collapse:collapse; font-size:14px'><thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table>"
 
 st.set_page_config(page_title="Client Balance Comparison", layout="wide")
 st.title("📊 Client Balance Changes & Rankings")
@@ -90,20 +81,19 @@ if yesterday_file and current_file and st.button("🚦 Generate Comparison Table
         st.session_state['final_result_with_total'] = final_with
 
 if 'final_result_with_total' in st.session_state:
-    hey, cur = sig_yest[0], sig_curr[0]
-    lbl_y = f"Balance as of {extract_date_label(hey)}"
-    lbl_c = f"Balance as of {extract_date_label(cur)}"
-    colnames = {'yesterday_currentbal':lbl_y, 'current_currentbal':lbl_c, 'change':'Changes'}
+    lbl_y = f"Balance as of {extract_date_label(sig_yest[0])}"
+    lbl_c = f"Balance as of {extract_date_label(sig_curr[0])}"
+    colnames = {'yesterday_currentbal': lbl_y, 'current_currentbal': lbl_c, 'change': 'Changes'}
 
     main = st.session_state['final_result_with_total'].rename(columns=colnames)
     st.subheader("📋 All Clients Balance Comparison")
-    st.dataframe(add_separator(main, [c for c in colnames.values() if c in main.columns]), use_container_width=True)
+    st.dataframe(add_separator(main, list(colnames.values())), use_container_width=True)
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Analysis", "🥇 IPOT", "🥇 WM", "🥇 Private Dealing", "🥇 Others"])
 
     df = st.session_state['final_result'].copy()
     df['Fee Type'] = df['int_rate'].apply(lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee')
-    def grp(s): 
+    def grp(s):
         if s == 'IPOT': return 'IPOT'
         if isinstance(s, str) and s.startswith('WM'): return 'WM'
         if s in ['Private Dealing', 'RT2']: return 'Private Dealing'
@@ -113,7 +103,7 @@ if 'final_result_with_total' in st.session_state:
     def sum_table(d):
         s = d.groupby(['Group','Fee Type'], as_index=False)[['yesterday_currentbal','current_currentbal','change']].sum()
         tot = pd.DataFrame([{'Group':'Total','Fee Type':'','yesterday_currentbal':s.yesterday_currentbal.sum(),'current_currentbal':s.current_currentbal.sum(),'change':s.change.sum()}])
-        return pd.concat([s,tot], ignore_index=True)
+        return pd.concat([s, tot], ignore_index=True)
 
     def total_only(d):
         t = d.groupby('Fee Type')[['yesterday_currentbal','current_currentbal','change']].sum().reset_index()
@@ -131,19 +121,19 @@ if 'final_result_with_total' in st.session_state:
     with tab1:
         st.markdown("#### 1️⃣ IPOT, WM, Others by Fee Type")
         df1 = sum_table(df[df['Group'].isin(['IPOT','WM','Others'])]).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df1, list(colnames.values())), list(colnames.values()), rank_tab_colgroup_nowrap), unsafe_allow_html=True)
+        st.markdown(html_table(add_separator(df1, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
 
         st.markdown("#### 2️⃣ Private Dealing by Fee Type")
         df2 = sum_table(df[df['Group'] == 'Private Dealing']).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df2, list(colnames.values())), list(colnames.values()), rank_tab_colgroup_nowrap), unsafe_allow_html=True)
+        st.markdown(html_table(add_separator(df2, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
 
         st.markdown("#### 3️⃣ Total Seluruh Piutang by Fee Type")
         df3 = total_only(df).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df3, list(colnames.values())), list(colnames.values()), rank_tab_colgroup_nowrap), unsafe_allow_html=True)
+        st.markdown(html_table(add_separator(df3, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
 
         st.markdown("#### 4️⃣ Total by Group Only")
         df4 = total_by_group_only(df).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df4, list(colnames.values())), list(colnames.values()), rank_tab_colgroup_nowrap), unsafe_allow_html=True)
+        st.markdown(html_table(add_separator(df4, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
 
     masks = {
         'IPOT': df['salesid'] == 'IPOT',
@@ -162,5 +152,5 @@ if 'final_result_with_total' in st.session_state:
             ]:
                 st.markdown(f"#### {lbl}")
                 dt = f(subset)[['custcode','custname','salesid','change','current_currentbal']].rename(columns=colnames)
-                styled = add_separator(dt, [c for c in colnames.values() if c in dt.columns])
-                st.markdown(html_table_with_colgroup(styled, [c for c in colnames.values() if c in dt.columns], rank_tab_colgroup_nowrap), unsafe_allow_html=True)
+                styled = add_separator(dt, list(colnames.values()))
+                st.markdown(html_table(styled, list(colnames.values())), unsafe_allow_html=True)
