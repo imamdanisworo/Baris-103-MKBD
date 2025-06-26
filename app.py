@@ -11,7 +11,7 @@ def add_separator(df, cols):
     return fmt_df
 
 def extract_date_label(filename):
-    match = re.search(r'(\d{4})-(\d{2})-(\d{2})', filename)
+    match = re.search(r'(\\d{4})-(\\d{2})-(\\d{2})', filename)
     if match:
         year, month, day = match.groups()
         return datetime(int(year), int(month), int(day)).strftime("%d %b %Y")
@@ -28,10 +28,10 @@ def html_table_with_colgroup(df, numeric_cols, colgroup):
         return html
 
     headers = "".join(f"<th style='text-align:left; padding:4px 10px; white-space: nowrap;'>{col}</th>" for col in df.columns)
-    rows = "\n".join(make_html(row) for _, row in df.iterrows())
+    rows = "\\n".join(make_html(row) for _, row in df.iterrows())
     return f"<table style='border-collapse:collapse; font-size:14px'>{colgroup}<thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table>"
 
-# Consistent column widths and nowrap style
+# Fixed column widths (no wrapping)
 rank_tab_colgroup_nowrap = """<colgroup>
 <col style='width: 72px; white-space: nowrap;'>
 <col style='width: 72px; white-space: nowrap;'>
