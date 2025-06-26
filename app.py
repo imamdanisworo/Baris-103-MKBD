@@ -190,3 +190,41 @@ if 'final' in st.session_state:
                     html_table(styled, list(colnames.values()), colgroup),
                     unsafe_allow_html=True
                 )
+
+        def structure_grouping(df, is_positive=True):
+            if is_positive:
+                data = df[df['change'] > 0].copy()
+                data['Group Range'] = pd.cut(
+                    data['change'],
+                    bins=[0, 500_000_000, 1_000_000_000, float('inf')],
+                    labels=["< 500 Mio", "500 Mio - 1 Bio", "> 1 Bio"]
+                )
+            else:
+                data = df[df['change'] < 0].copy()
+                data['abs_change'] = data['change'].abs()
+                data['Group Range'] = pd.cut(
+                    data['abs_change'],
+                    bins=[0, 500_000_000, 1_000_000_000, float('inf')],
+                    labels=["< 500 Mio", "500 Mio - 1 Bio", "> 1 Bio"]
+                )
+            summary = data.groupby('Group Range', observed=True)['change'].agg(['count', 'sum']).reset_index()
+            summary.columns = ['Range', 'Client Count', 'Total Changes']
+            return summary
+
+        st.markdown("#### 5️⃣ Clients with Positive Changes by Range")
+        pos_tbl = structure_grouping(df, is_positive=True)
+        styled_pos = add_separator(pos_tbl, ['Client Count', 'Total Changes'])
+        colgroup_pos = get_colgroup_by_width(styled_pos, ['Client Count', 'Total Changes'])
+        st.markdown(
+            html_table(styled_pos, ['Client Count', 'Total Changes'], colgroup_pos),
+            unsafe_allow_html=True
+        )
+
+        st.markdown("#### 6️⃣ Clients with Negative Changes by Range")
+        neg_tbl = structure_grouping(df, is_positive=False)
+        styled_neg = add_separator(neg_tbl, ['Client Count', 'Total Changes'])
+        colgroup_neg = get_colgroup_by_width(styled_neg, ['Client Count', 'Total Changes'])
+        st.markdown(
+            html_table(styled_neg, ['Client Count', 'Total Changes'], colgroup_neg),
+            unsafe_allow_html=True
+        )
