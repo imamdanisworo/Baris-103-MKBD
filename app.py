@@ -138,19 +138,27 @@ if 'final_result_with_total' in st.session_state:
     with tab1:
         st.markdown("#### 1️⃣ IPOT, WM, Others by Fee Type")
         df1 = sum_table(df[df['Group'].isin(['IPOT','WM','Others'])]).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df1, list(colnames.values())), list(colnames.values()), colgroup_html), unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='overflow-x:auto; width:fit-content;'>{html_table_with_colgroup(add_separator(df1, list(colnames.values())), list(colnames.values()), colgroup_html)}</div>",
+            unsafe_allow_html=True)
 
         st.markdown("#### 2️⃣ Private Dealing by Fee Type")
         df2 = sum_table(df[df['Group'] == 'Private Dealing']).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df2, list(colnames.values())), list(colnames.values()), colgroup_html), unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='overflow-x:auto; width:fit-content;'>{html_table_with_colgroup(add_separator(df2, list(colnames.values())), list(colnames.values()), colgroup_html)}</div>",
+            unsafe_allow_html=True)
 
         st.markdown("#### 3️⃣ Total Seluruh Piutang by Fee Type")
         df3 = total_only(df).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df3, list(colnames.values())), list(colnames.values()), colgroup_html), unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='overflow-x:auto; width:fit-content;'>{html_table_with_colgroup(add_separator(df3, list(colnames.values())), list(colnames.values()), colgroup_html)}</div>",
+            unsafe_allow_html=True)
 
         st.markdown("#### 4️⃣ Total by Group Only")
         df4 = total_by_group_only(df).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df4, list(colnames.values())), list(colnames.values()), colgroup_html), unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='overflow-x:auto; width:fit-content;'>{html_table_with_colgroup(add_separator(df4, list(colnames.values())), list(colnames.values()), colgroup_html)}</div>",
+            unsafe_allow_html=True)
 
     masks = {
         'IPOT': df['salesid'] == 'IPOT',
@@ -170,4 +178,6 @@ if 'final_result_with_total' in st.session_state:
                 st.markdown(f"#### {lbl}")
                 dt = f(subset)[['custcode','custname','salesid','change','current_currentbal']].rename(columns=colnames)
                 styled = add_separator(dt, [c for c in colnames.values() if c in dt.columns])
-                st.markdown(html_table_with_colgroup(styled, [c for c in colnames.values() if c in styled.columns], colgroup_html), unsafe_allow_html=True)
+                st.markdown(
+                    f"<div style='overflow-x:auto; width:fit-content;'>{html_table_with_colgroup(styled, [c for c in colnames.values() if c in styled.columns], colgroup_html)}</div>",
+                    unsafe_allow_html=True)
