@@ -170,27 +170,7 @@ if 'final' in st.session_state:
                 unsafe_allow_html=True
             )
 
-    for tab, group in zip(rank_tabs, ['IPOT', 'WM', 'Private Dealing', 'Others']):
-        with tab:
-            sub = df[df['Group'] == group]
-            tables = [
-                ("Top 20 by Changes", sub.nlargest(20, 'change')),
-                ("Bottom 20 by Changes", sub.nsmallest(20, 'change')),
-                ("Top 20 by Today Value", sub.nlargest(20, 'bal_c')),
-            ]
-            combined = pd.concat([t[1] for t in tables], ignore_index=True)
-            combined = combined[['custcode', 'custname', 'salesid', 'change', 'bal_c']].rename(columns=colnames)
-            colgroup = get_colgroup_by_width(combined, list(colnames.values()))
-
-            for title, df_subset in tables:
-                st.markdown(f"#### {title}")
-                display = df_subset[['custcode', 'custname', 'salesid', 'change', 'bal_c']].rename(columns=colnames)
-                styled = add_separator(display, list(colnames.values()))
-                st.markdown(
-                    html_table(styled, list(colnames.values()), colgroup),
-                    unsafe_allow_html=True
-                )
-
+        # ✅ Moved 5️⃣ and 6️⃣ inside the Analysis tab only
         def structure_grouping(df, is_positive=True):
             if is_positive:
                 data = df[df['change'] > 0].copy()
@@ -228,3 +208,23 @@ if 'final' in st.session_state:
             html_table(styled_neg, ['Client Count', 'Total Changes'], colgroup_neg),
             unsafe_allow_html=True
         )
+
+    # 🎯 Ranking tabs (unchanged except removed 5️⃣/6️⃣ from inside here)
+    for tab, group in zip(rank_tabs, ['IPOT', 'WM', 'Private Dealing', 'Others']):
+        with tab:
+            sub = df[df['Group'] == group]
+            tables = [
+                ("Top 20 by Changes", sub.nlargest(20, 'change')),
+                ("Bottom 20 by Changes", sub.nsmallest(20, 'change')),
+                ("Top 20 by Today Value", sub.nlargest(20, 'bal_c')),
+            ]
+            colgroup = get_colgroup_by_width(sub, list(colnames.values()))
+
+            for title, df_subset in tables:
+                st.markdown(f"#### {title}")
+                display = df_subset[['custcode', 'custname', 'salesid', 'change', 'bal_c']].rename(columns=colnames)
+                styled = add_separator(display, list(colnames.values()))
+                st.markdown(
+                    html_table(styled, list(colnames.values()), colgroup),
+                    unsafe_allow_html=True
+                )
