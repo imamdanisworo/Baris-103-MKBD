@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import os
+from datetime import datetime
 
 def add_separator(df, cols):
     fmt_df = df.copy()
@@ -7,6 +9,14 @@ def add_separator(df, cols):
         if col in fmt_df.columns:
             fmt_df[col] = fmt_df[col].apply(lambda x: '{:,.2f}'.format(x) if pd.notnull(x) else '')
     return fmt_df
+
+def extract_date_label(filename):
+    try:
+        basename = os.path.splitext(filename)[0]
+        parsed = datetime.strptime(basename, "%d%m%y")
+        return parsed.strftime("%d-%b-%Y")
+    except Exception:
+        return filename
 
 st.set_page_config(page_title="Client Balance Comparison", layout="wide")
 
@@ -85,9 +95,20 @@ if yesterday_file and current_file:
         final_result_with_total = st.session_state['final_result_with_total']
         final_result = st.session_state['final_result']
 
+        # Dynamic column labels
+        yesterday_label = extract_date_label(sig_yest[0]) if sig_yest else "Yesterday"
+        today_label = extract_date_label(sig_curr[0]) if sig_curr else "Today"
+        col_rename = {
+            'yesterday_currentbal': f'Balance as of {yesterday_label}',
+            'current_currentbal': f'Balance as of {today_label}',
+            'change': 'Changes'
+        }
+
+        # ---------- MAIN TABLE ----------
         st.markdown("### 🗂️ All Clients — Balance Change Table")
-        st.dataframe(final_result_with_total, use_container_width=True)
-        csv = final_result_with_total.to_csv(index=False)
+        main_table = final_result_with_total.rename(columns=col_rename)
+        st.dataframe(main_table, use_container_width=True)
+        csv = main_table.to_csv(index=False)
         st.download_button("⬇️ Download Result as CSV", csv, "balance_changes.csv", "text/csv")
 
         st.divider()
@@ -100,7 +121,7 @@ if yesterday_file and current_file:
             "🥇 Rank Others"
         ])
 
-        # --------- ANALYSIS TAB --------------
+        # --------- ANALYSIS TAB ---------
         with tab1:
             df = final_result.copy()
             df['Fee Type'] = df['int_rate'].apply(lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee')
@@ -151,20 +172,20 @@ if yesterday_file and current_file:
             df_main = df[df['Group'].isin(['IPOT', 'WM', 'Others'])]
             df_priv = df[df['Group'] == 'Private Dealing']
 
-            group_summary = build_group_summary_v2(df_main)
-            priv_summary = build_group_summary_v2(df_priv)
-            total_summary = build_total_summary_only(df)
+            group_summary = build_group_summary_v2(df_main).rename(columns=col_rename)
+            priv_summary = build_group_summary_v2(df_priv).rename(columns=col_rename)
+            total_summary = build_total_summary_only(df).rename(columns=col_rename)
 
             st.markdown("#### 1️⃣ IPOT, WM, and Others")
-            st.dataframe(add_separator(group_summary, ['yesterday_currentbal', 'current_currentbal', 'change']), use_container_width=True)
+            st.dataframe(add_separator(group_summary, list(col_rename.values())), use_container_width=True)
 
             st.markdown("#### 2️⃣ Private Dealing Only")
-            st.dataframe(add_separator(priv_summary, ['yesterday_currentbal', 'current_currentbal', 'change']), use_container_width=True)
+            st.dataframe(add_separator(priv_summary, list(col_rename.values())), use_container_width=True)
 
             st.markdown("#### 3️⃣ Total Seluruh Piutang")
-            st.dataframe(add_separator(total_summary, ['yesterday_currentbal', 'current_currentbal', 'change']), use_container_width=True)
+            st.dataframe(add_separator(total_summary, list(col_rename.values())), use_container_width=True)
 
-        # --------- RANKING TABS --------------
+        # --------- RANKING TABS ---------
         masks = {
             "IPOT": df['salesid'] == 'IPOT',
             "WM": df['salesid'].str.startswith('WM', na=False),
@@ -174,28 +195,19 @@ if yesterday_file and current_file:
 
         for tab, group_name in zip([tab2, tab3, tab4, tab5], masks.keys()):
             with tab:
-                st.markdown(f"#### 🥇 Top 20 {group_name} by Changes")
                 group_df = df[masks[group_name]]
-                top_change = group_df.nlargest(20, 'change')
-                st.dataframe(
-                    add_separator(top_change[['custcode','custname','salesid','change','current_currentbal']], ['change', 'current_currentbal']),
-                    use_container_width=True, height=400
-                )
+
+                st.markdown(f"#### 🥇 Top 20 {group_name} by Changes")
+                top_change = group_df.nlargest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
+                st.dataframe(add_separator(top_change.rename(columns=col_rename), list(col_rename.values())), use_container_width=True, height=400)
 
                 st.markdown(f"#### 🥉 Bottom 20 {group_name} by Changes")
-                bottom_change = group_df.nsmallest(20, 'change')
-                st.dataframe(
-                    add_separator(bottom_change[['custcode','custname','salesid','change','current_currentbal']], ['change', 'current_currentbal']),
-                    use_container_width=True, height=400
-                )
+                bottom_change = group_df.nsmallest(20, 'change')[['custcode','custname','salesid','change','current_currentbal']]
+                st.dataframe(add_separator(bottom_change.rename(columns=col_rename), list(col_rename.values())), use_container_width=True, height=400)
 
                 st.markdown(f"#### 💰 Top 20 {group_name} by Today's Value")
-                top_value = group_df.nlargest(20, 'current_currentbal')
-                st.dataframe(
-                    add_separator(top_value[['custcode','custname','salesid','current_currentbal','change']], ['current_currentbal', 'change']),
-                    use_container_width=True, height=400
-                )
-                if group_df.empty:
-                    st.warning(f"No data found for {group_name} group.")
+                top_value = group_df.nlargest(20, 'current_currentbal')[['custcode','custname','salesid','current_currentbal','change']]
+                st.dataframe(add_separator(top_value.rename(columns=col_rename), list(col_rename.values())), use_container_width=True, height=400)
+
 else:
     st.info("Please upload both files to begin.")
