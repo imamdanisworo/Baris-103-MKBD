@@ -28,7 +28,7 @@ def html_table(df, numeric_cols, colgroup=""):
         return html
 
     headers = "".join(f"<th style='text-align:left; padding:4px 10px; white-space: nowrap;'>{col}</th>" for col in df.columns)
-    rows = "\n".join(make_html(row) for _, row in df.iterrows())
+    rows = "\n".join(make_html(row) for _, row in df.reset_index(drop=True).iterrows())
     return f"<table style='border-collapse:collapse; font-size:14px'>{colgroup}<thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table>"
 
 def get_colgroup_by_max_width(tables):
@@ -105,13 +105,10 @@ if 'final_result_with_total' in st.session_state:
     st.subheader("📋 All Clients Balance Comparison")
     st.dataframe(add_separator(main, list(colnames.values())), use_container_width=True)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Analysis", "🥇 IPOT", "🥇 WM", "🥇 Private Dealing", "🥇 Others"
-    ])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Analysis", "🥇 IPOT", "🥇 WM", "🥇 Private Dealing", "🥇 Others"])
 
     df = st.session_state['final_result'].copy()
     df['Fee Type'] = df['int_rate'].apply(lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee')
-
     def grp(s): 
         if s == 'IPOT': return 'IPOT'
         if isinstance(s, str) and s.startswith('WM'): return 'WM'
@@ -120,16 +117,15 @@ if 'final_result_with_total' in st.session_state:
     df['Group'] = df['salesid'].apply(grp)
 
     def sum_table(d):
-        s = d.groupby(['Group', 'Fee Type'], as_index=False)[
-            ['yesterday_currentbal','current_currentbal','change']
-        ].sum()
-        total = pd.DataFrame([{
-            'Group': 'Total', 'Fee Type': '',
-            'yesterday_currentbal': s.yesterday_currentbal.sum(),
-            'current_currentbal': s.current_currentbal.sum(),
-            'change': s.change.sum()
+        s = d.groupby(['Group','Fee Type'], as_index=False)[['yesterday_currentbal','current_currentbal','change']].sum()
+        tot = pd.DataFrame([{
+            'Group': 'Total',
+            'Fee Type': '',
+            'yesterday_currentbal': s['yesterday_currentbal'].sum(),
+            'current_currentbal': s['current_currentbal'].sum(),
+            'change': s['change'].sum()
         }])
-        return pd.concat([s, total], ignore_index=True)
+        return pd.concat([s, tot], ignore_index=True)
 
     def total_only(d):
         t = d.groupby('Fee Type')[['yesterday_currentbal','current_currentbal','change']].sum().reset_index()
@@ -183,8 +179,14 @@ if 'final_result_with_total' in st.session_state:
                 ("Bottom 20 by Changes", subset.nsmallest(20, 'change')),
                 ("Top 20 by Today Value", subset.nlargest(20, 'current_currentbal'))
             ]
-            colgroup = get_colgroup_by_max_width(tables)
-            for title, data in tables:
+            # Filter out empty tables
+            non_empty_tables = [(title, tbl) for title, tbl in tables if not tbl.empty]
+            if not non_empty_tables:
+                st.markdown("No data available.")
+                continue
+
+            colgroup = get_colgroup_by_max_width(non_empty_tables)
+            for title, data in non_empty_tables:
                 st.markdown(f"#### {title}")
                 display_data = data[['custcode', 'custname', 'salesid', 'change', 'current_currentbal']].rename(columns=colnames)
                 styled = add_separator(display_data, [c for c in colnames.values() if c in display_data.columns])
