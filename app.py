@@ -6,7 +6,8 @@ from datetime import datetime
 def add_separator(df, cols):
     fmt_df = df.copy()
     for col in cols:
-        fmt_df[col] = fmt_df[col].apply(lambda x: '{:,.2f}'.format(x) if pd.notnull(x) else '')
+        if col in fmt_df.columns:
+            fmt_df[col] = fmt_df[col].apply(lambda x: '{:,.2f}'.format(x) if pd.notnull(x) else '')
     return fmt_df
 
 def extract_date_label(filename):
@@ -73,7 +74,7 @@ if 'final_result_with_total' in st.session_state:
 
     st.subheader("🗂️ All Clients — Balance Change Table")
     main = st.session_state['final_result_with_total'].rename(columns=colnames)
-    st.dataframe(add_separator(main, list(colnames.values())), use_container_width=True)
+    st.dataframe(add_separator(main, [c for c in colnames.values() if c in main.columns]), use_container_width=True)
 
     st.divider()
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Analysis", "🥇 IPOT", "🥇 WM", "🥇 Private Dealing", "🥇 Others"])
@@ -94,9 +95,13 @@ if 'final_result_with_total' in st.session_state:
 
     def total_only(d):
         t = d.groupby('Fee Type')[['yesterday_currentbal','current_currentbal','change']].sum().reset_index()
-        t['Group'] = 'Total '+t['Fee Type']
-        g = pd.DataFrame([{'Fee Type':'','Group':'Grand Total','yesterday_currentbal':t.yesterday_currentbal.sum(),'current_currentbal':t.current_currentbal.sum(),'change':t.change.sum()}])
-        return pd.concat([t,g],ignore_index=True)
+        g = pd.DataFrame([{
+            'Fee Type': 'Grand Total',
+            'yesterday_currentbal': t['yesterday_currentbal'].sum(),
+            'current_currentbal': t['current_currentbal'].sum(),
+            'change': t['change'].sum()
+        }])
+        return pd.concat([t[['Fee Type','yesterday_currentbal','current_currentbal','change']], g], ignore_index=True)
 
     def total_by_group_only(d):
         return d.groupby('Group', as_index=False)[['yesterday_currentbal','current_currentbal','change']].sum()
@@ -121,9 +126,12 @@ if 'final_result_with_total' in st.session_state:
     for t, name in zip([tab2, tab3, tab4, tab5], masks):
         with t:
             subset = df[masks[name]]
-            for lbl, f in [('Top 20 by Changes', lambda d: d.nlargest(20, 'change')),
-                           ('Bottom 20 by Changes', lambda d: d.nsmallest(20, 'change')),
-                           ('Top 20 by Today Value', lambda d: d.nlargest(20, 'current_currentbal'))]:
+            for lbl, f in [
+                ('Top 20 by Changes', lambda d: d.nlargest(20, 'change')),
+                ('Bottom 20 by Changes', lambda d: d.nsmallest(20, 'change')),
+                ('Top 20 by Today Value', lambda d: d.nlargest(20, 'current_currentbal'))
+            ]:
                 st.markdown(f"#### {lbl}")
                 dt = f(subset)[['custcode','custname','salesid','change','current_currentbal']].rename(columns=colnames)
-                st.dataframe(add_separator(dt, list(colnames.values())), use_container_width=True)
+                existing_cols = [col for col in colnames.values() if col in dt.columns]
+                st.dataframe(add_separator(dt, existing_cols), use_container_width=True)
