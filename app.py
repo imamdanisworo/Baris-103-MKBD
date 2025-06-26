@@ -100,12 +100,11 @@ if yesterday_file and current_file:
             "🥇 Rank Others"
         ])
 
-        # ANALYSIS TAB ------------------------------------------------
+        # --------- ANALYSIS TAB --------------
         with tab1:
             df = final_result.copy()
             df['Fee Type'] = df['int_rate'].apply(lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee')
 
-            # Apply group logic
             def classify_group(salesid):
                 if salesid == 'IPOT':
                     return 'IPOT'
@@ -133,12 +132,28 @@ if yesterday_file and current_file:
                 }])
                 return pd.concat([summary, total_row], ignore_index=True)
 
+            def build_total_summary_only(df):
+                fee_totals = df.groupby('Fee Type', as_index=False).agg({
+                    'yesterday_currentbal': 'sum',
+                    'current_currentbal': 'sum',
+                    'change': 'sum'
+                })
+                fee_totals['Group'] = 'Total ' + fee_totals['Fee Type']
+                grand_total = pd.DataFrame([{
+                    'Group': 'Grand Total',
+                    'Fee Type': '',
+                    'yesterday_currentbal': fee_totals['yesterday_currentbal'].sum(),
+                    'current_currentbal': fee_totals['current_currentbal'].sum(),
+                    'change': fee_totals['change'].sum()
+                }])
+                return pd.concat([fee_totals[['Group', 'Fee Type', 'yesterday_currentbal', 'current_currentbal', 'change']], grand_total], ignore_index=True)
+
             df_main = df[df['Group'].isin(['IPOT', 'WM', 'Others'])]
             df_priv = df[df['Group'] == 'Private Dealing']
 
             group_summary = build_group_summary_v2(df_main)
             priv_summary = build_group_summary_v2(df_priv)
-            total_summary = build_group_summary_v2(df)
+            total_summary = build_total_summary_only(df)
 
             st.markdown("#### 1️⃣ IPOT, WM, and Others")
             st.dataframe(add_separator(group_summary, ['yesterday_currentbal', 'current_currentbal', 'change']), use_container_width=True)
@@ -149,7 +164,7 @@ if yesterday_file and current_file:
             st.markdown("#### 3️⃣ Total Seluruh Piutang")
             st.dataframe(add_separator(total_summary, ['yesterday_currentbal', 'current_currentbal', 'change']), use_container_width=True)
 
-        # RANKING TABS ------------------------------------------------
+        # --------- RANKING TABS --------------
         masks = {
             "IPOT": df['salesid'] == 'IPOT',
             "WM": df['salesid'].str.startswith('WM', na=False),
