@@ -64,7 +64,10 @@ if yesterday_file and current_file and st.button("🚦 Generate Comparison Table
         df_y = pd.read_csv(yesterday_file, sep="|")
         df_c = pd.read_csv(current_file, sep="|")
 
-        y = df_y.groupby('custcode', as_index=False).agg({'custname':'first','salesid':'first','currentbal':'sum'}).rename(columns={'currentbal':'yesterday_currentbal'})
+        y = df_y.groupby('custcode', as_index=False).agg({
+            'custname':'first','salesid':'first','currentbal':'sum'
+        }).rename(columns={'currentbal':'yesterday_currentbal'})
+
         c_agg = {'custname':'first','salesid':'first','currentbal':'sum'}
         if 'int_rate' in df_c.columns: c_agg['int_rate'] = 'first'
         if 'int_rate_daily' in df_c.columns: c_agg['int_rate_daily'] = 'first'
@@ -79,7 +82,8 @@ if yesterday_file and current_file and st.button("🚦 Generate Comparison Table
         if 'int_rate' not in merged: merged['int_rate'] = None
         if 'int_rate_daily' not in merged: merged['int_rate_daily'] = None
 
-        final = merged[['custcode','custname','salesid','yesterday_currentbal','current_currentbal','change','int_rate','int_rate_daily']]
+        final = merged[['custcode','custname','salesid','yesterday_currentbal',
+                        'current_currentbal','change','int_rate','int_rate_daily']]
         totals = {
             'custcode':'', 'custname':'TOTAL','salesid':'',
             'yesterday_currentbal':final['yesterday_currentbal'].sum(),
@@ -95,16 +99,19 @@ if 'final_result_with_total' in st.session_state:
     hey, cur = sig_yest[0], sig_curr[0]
     lbl_y = f"Balance as of {extract_date_label(hey)}"
     lbl_c = f"Balance as of {extract_date_label(cur)}"
-    colnames = {'yesterday_currentbal':lbl_y, 'current_currentbal':lbl_c, 'change':'Changes'}
+    colnames = {'yesterday_currentbal': lbl_y, 'current_currentbal': lbl_c, 'change': 'Changes'}
 
     main = st.session_state['final_result_with_total'].rename(columns=colnames)
     st.subheader("📋 All Clients Balance Comparison")
     st.dataframe(add_separator(main, list(colnames.values())), use_container_width=True)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Analysis", "🥇 IPOT", "🥇 WM", "🥇 Private Dealing", "🥇 Others"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📊 Analysis", "🥇 IPOT", "🥇 WM", "🥇 Private Dealing", "🥇 Others"
+    ])
 
     df = st.session_state['final_result'].copy()
     df['Fee Type'] = df['int_rate'].apply(lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee')
+
     def grp(s): 
         if s == 'IPOT': return 'IPOT'
         if isinstance(s, str) and s.startswith('WM'): return 'WM'
@@ -113,9 +120,16 @@ if 'final_result_with_total' in st.session_state:
     df['Group'] = df['salesid'].apply(grp)
 
     def sum_table(d):
-        s = d.groupby(['Group','Fee Type'], as_index=False)[['yesterday_currentbal','current_currentbal','change']].sum()
-        tot = pd.DataFrame([{'Group':'Total','Fee Type':'','yesterday_currentbal':s.yesterday_currentbal.sum(),'current_currentbal':s.current_currentbal.sum(),'change':s.change.sum()}])
-        return pd.concat([s,tot], ignore_index=True)
+        s = d.groupby(['Group', 'Fee Type'], as_index=False)[
+            ['yesterday_currentbal','current_currentbal','change']
+        ].sum()
+        total = pd.DataFrame([{
+            'Group': 'Total', 'Fee Type': '',
+            'yesterday_currentbal': s.yesterday_currentbal.sum(),
+            'current_currentbal': s.current_currentbal.sum(),
+            'change': s.change.sum()
+        }])
+        return pd.concat([s, total], ignore_index=True)
 
     def total_only(d):
         t = d.groupby('Fee Type')[['yesterday_currentbal','current_currentbal','change']].sum().reset_index()
@@ -128,21 +142,30 @@ if 'final_result_with_total' in st.session_state:
         return pd.concat([t[['Fee Type','yesterday_currentbal','current_currentbal','change']], g], ignore_index=True)
 
     def total_by_group_only(d):
-        return d.groupby('Group', as_index=False)[['yesterday_currentbal','current_currentbal','change']].sum()
+        s = d.groupby('Group', as_index=False)[['yesterday_currentbal','current_currentbal','change']].sum()
+        total = pd.DataFrame([{
+            'Group': 'Total Seluruh Group',
+            'yesterday_currentbal': s['yesterday_currentbal'].sum(),
+            'current_currentbal': s['current_currentbal'].sum(),
+            'change': s['change'].sum()
+        }])
+        return pd.concat([s, total], ignore_index=True)
 
     with tab1:
-        st.markdown("### 🧮 Analysis Tables")
-        df1 = sum_table(df[df['Group'].isin(['IPOT','WM','Others'])]).rename(columns=colnames)
-        df2 = sum_table(df[df['Group'] == 'Private Dealing']).rename(columns=colnames)
-        df3 = total_only(df).rename(columns=colnames)
-        df4 = total_by_group_only(df).rename(columns=colnames)
         st.markdown("#### 1️⃣ IPOT, WM, Others by Fee Type")
+        df1 = sum_table(df[df['Group'].isin(['IPOT','WM','Others'])]).rename(columns=colnames)
         st.markdown(html_table(add_separator(df1, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+
         st.markdown("#### 2️⃣ Private Dealing by Fee Type")
+        df2 = sum_table(df[df['Group'] == 'Private Dealing']).rename(columns=colnames)
         st.markdown(html_table(add_separator(df2, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+
         st.markdown("#### 3️⃣ Total Seluruh Piutang by Fee Type")
+        df3 = total_only(df).rename(columns=colnames)
         st.markdown(html_table(add_separator(df3, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+
         st.markdown("#### 4️⃣ Total by Group Only")
+        df4 = total_by_group_only(df).rename(columns=colnames)
         st.markdown(html_table(add_separator(df4, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
 
     masks = {
