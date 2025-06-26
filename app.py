@@ -19,9 +19,17 @@ def extract_date_label(filename):
         return date.strftime("%d %b %Y")
     return filename
 
+def style_df(df, numeric_cols):
+    return df.style.set_properties(
+        **{'text-align': 'right'},
+        subset=numeric_cols
+    ).set_table_styles([
+        {"selector":"th","props":[("text-align","left")]}
+    ])
+
 st.set_page_config(page_title="Client Balance Comparison", layout="wide")
 
-st.markdown("""# 📊 Client Balance Changes & Rankings""")
+st.markdown("# 📊 Client Balance Changes & Rankings")
 st.info("**Step 1:** Upload yesterday's and today's files (CSV, pipe delimited).<br>**Step 2:** Click 'Generate Comparison Table'.<br>**Step 3:** Browse tabs for insights & rankings.", icon="ℹ️")
 st.divider()
 
@@ -96,7 +104,6 @@ if yesterday_file and current_file:
         final_result_with_total = st.session_state['final_result_with_total']
         final_result = st.session_state['final_result']
 
-        # Dynamic column labels from filenames
         yesterday_label = extract_date_label(sig_yest[0]) if sig_yest else "Yesterday"
         today_label = extract_date_label(sig_curr[0]) if sig_curr else "Today"
         col_rename = {
@@ -104,22 +111,17 @@ if yesterday_file and current_file:
             'current_currentbal': f'Balance as of {today_label}',
             'change': 'Changes'
         }
-
-        column_config = {col: st.column_config.NumberColumn(align="right") for col in col_rename.values()}
+        numeric_cols = list(col_rename.values())
 
         # ---------- MAIN TABLE ----------
         st.markdown("### 🗂️ All Clients — Balance Change Table")
         main_table = final_result_with_total.rename(columns=col_rename)
-        st.data_editor(
-            add_separator(main_table, list(col_rename.values())),
-            column_config=column_config,
-            hide_index=True
-        )
+        styled = style_df(add_separator(main_table, numeric_cols), numeric_cols)
+        st.dataframe(styled, use_container_width=True)
         csv = main_table.to_csv(index=False)
         st.download_button("⬇️ Download Result as CSV", csv, "balance_changes.csv", "text/csv")
 
         st.divider()
-
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "📊 Analysis",
             "🥇 Rank IPOT",
@@ -131,7 +133,6 @@ if yesterday_file and current_file:
         with tab1:
             df = final_result.copy()
             df['Fee Type'] = df['int_rate'].apply(lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee')
-
             def classify_group(salesid):
                 if salesid == 'IPOT':
                     return 'IPOT'
@@ -141,7 +142,6 @@ if yesterday_file and current_file:
                     return 'Private Dealing'
                 else:
                     return 'Others'
-
             df['Group'] = df['salesid'].apply(classify_group)
 
             def build_group_summary_v2(data):
@@ -178,20 +178,13 @@ if yesterday_file and current_file:
             df_main = df[df['Group'].isin(['IPOT', 'WM', 'Others'])]
             df_priv = df[df['Group'] == 'Private Dealing']
 
-            group_summary = build_group_summary_v2(df_main).rename(columns=col_rename)
-            priv_summary = build_group_summary_v2(df_priv).rename(columns=col_rename)
-            total_summary = build_total_summary_only(df).rename(columns=col_rename)
-
-            for title, table in zip(
+            for title, summary_func in zip(
                 ["1️⃣ IPOT, WM, and Others", "2️⃣ Private Dealing Only", "3️⃣ Total Seluruh Piutang"],
-                [group_summary, priv_summary, total_summary]
+                [lambda: build_group_summary_v2(df_main), lambda: build_group_summary_v2(df_priv), lambda: build_total_summary_only(df)]
             ):
                 st.markdown(f"#### {title}")
-                st.data_editor(
-                    add_separator(table, list(col_rename.values())),
-                    column_config=column_config,
-                    hide_index=True
-                )
+                styled = style_df(add_separator(summary_func().rename(columns=col_rename), numeric_cols), numeric_cols)
+                st.dataframe(styled, use_container_width=True)
 
         masks = {
             "IPOT": df['salesid'] == 'IPOT',
@@ -211,12 +204,7 @@ if yesterday_file and current_file:
                     st.markdown(f"#### {label}")
                     cols = ['custcode','custname','salesid','change','current_currentbal'] if 'Value' not in label else ['custcode','custname','salesid','current_currentbal','change']
                     df_out = data_func(group_df)[cols].rename(columns=col_rename)
-                    st.data_editor(
-                        add_separator(df_out, list(col_rename.values())),
-                        column_config=column_config,
-                        hide_index=True,
-                        use_container_width=True,
-                        height=400
-                    )
+                    styled = style_df(add_separator(df_out, numeric_cols), numeric_cols)
+                    st.dataframe(styled, use_container_width=True, height=400)
 else:
     st.info("Please upload both files to begin.")
