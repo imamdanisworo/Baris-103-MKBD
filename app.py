@@ -104,10 +104,19 @@ if yesterday_file and current_file:
         with tab1:
             df = final_result.copy()
             df['Fee Type'] = df['int_rate'].apply(lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee')
-            df['Group'] = df.apply(
-                lambda row: 'Private Dealing' if row['salesid'] in ['Private Dealing', 'RT2'] else row['salesid'],
-                axis=1
-            )
+
+            # Apply group logic
+            def classify_group(salesid):
+                if salesid == 'IPOT':
+                    return 'IPOT'
+                elif isinstance(salesid, str) and salesid.startswith('WM'):
+                    return 'WM'
+                elif salesid in ['Private Dealing', 'RT2']:
+                    return 'Private Dealing'
+                else:
+                    return 'Others'
+
+            df['Group'] = df['salesid'].apply(classify_group)
 
             def build_group_summary_v2(data):
                 summary = data.groupby(['Group', 'Fee Type'], as_index=False).agg({
@@ -124,11 +133,10 @@ if yesterday_file and current_file:
                 }])
                 return pd.concat([summary, total_row], ignore_index=True)
 
-            priv_mask = df['Group'] == 'Private Dealing'
-            df_groups = df[~priv_mask].copy()
-            df_priv = df[priv_mask].copy()
+            df_main = df[df['Group'].isin(['IPOT', 'WM', 'Others'])]
+            df_priv = df[df['Group'] == 'Private Dealing']
 
-            group_summary = build_group_summary_v2(df_groups)
+            group_summary = build_group_summary_v2(df_main)
             priv_summary = build_group_summary_v2(df_priv)
             total_summary = build_group_summary_v2(df)
 
