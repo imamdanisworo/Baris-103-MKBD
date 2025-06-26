@@ -31,13 +31,13 @@ def html_table_with_colgroup(df, numeric_cols, colgroup):
     rows = "\n".join(make_html(row) for _, row in df.iterrows())
     return f"<table style='border-collapse:collapse; font-size:14px'>{colgroup}<thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table>"
 
-# Shared column widths for Rank tabs
-colgroup_html = """<colgroup>
-<col style='width: 80px;'>
-<col style='width: 248px;'>
-<col style='width: 120px;'>
-<col style='width: 96px;'>
-<col style='width: 104px;'>
+# Predefined colgroup for consistent width
+rank_tab_colgroup = """<colgroup>
+<col style='width: 72px;'>
+<col style='width: 72px;'>
+<col style='width: 63px;'>
+<col style='width: 63px;'>
+<col style='width: 225px;'>
 </colgroup>"""
 
 st.set_page_config(page_title="Client Balance Comparison", layout="wide")
@@ -131,19 +131,19 @@ if 'final_result_with_total' in st.session_state:
     with tab1:
         st.markdown("#### 1️⃣ IPOT, WM, Others by Fee Type")
         df1 = sum_table(df[df['Group'].isin(['IPOT','WM','Others'])]).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df1, list(colnames.values())), list(colnames.values()), colgroup_html), unsafe_allow_html=True)
+        st.markdown(html_table_with_colgroup(add_separator(df1, list(colnames.values())), list(colnames.values()), rank_tab_colgroup), unsafe_allow_html=True)
 
         st.markdown("#### 2️⃣ Private Dealing by Fee Type")
         df2 = sum_table(df[df['Group'] == 'Private Dealing']).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df2, list(colnames.values())), list(colnames.values()), colgroup_html), unsafe_allow_html=True)
+        st.markdown(html_table_with_colgroup(add_separator(df2, list(colnames.values())), list(colnames.values()), rank_tab_colgroup), unsafe_allow_html=True)
 
         st.markdown("#### 3️⃣ Total Seluruh Piutang by Fee Type")
         df3 = total_only(df).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df3, list(colnames.values())), list(colnames.values()), colgroup_html), unsafe_allow_html=True)
+        st.markdown(html_table_with_colgroup(add_separator(df3, list(colnames.values())), list(colnames.values()), rank_tab_colgroup), unsafe_allow_html=True)
 
         st.markdown("#### 4️⃣ Total by Group Only")
         df4 = total_by_group_only(df).rename(columns=colnames)
-        st.markdown(html_table_with_colgroup(add_separator(df4, list(colnames.values())), list(colnames.values()), colgroup_html), unsafe_allow_html=True)
+        st.markdown(html_table_with_colgroup(add_separator(df4, list(colnames.values())), list(colnames.values()), rank_tab_colgroup), unsafe_allow_html=True)
 
     masks = {
         'IPOT': df['salesid'] == 'IPOT',
@@ -163,4 +163,4 @@ if 'final_result_with_total' in st.session_state:
                 st.markdown(f"#### {lbl}")
                 dt = f(subset)[['custcode','custname','salesid','change','current_currentbal']].rename(columns=colnames)
                 styled = add_separator(dt, [c for c in colnames.values() if c in dt.columns])
-                st.markdown(html_table_with_colgroup(styled, [c for c in colnames.values() if c in dt.columns], colgroup_html), unsafe_allow_html=True)
+                st.markdown(html_table_with_colgroup(styled, [c for c in colnames.values() if c in dt.columns], rank_tab_colgroup), unsafe_allow_html=True)
