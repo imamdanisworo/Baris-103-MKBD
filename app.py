@@ -211,20 +211,21 @@ if 'final' in st.session_state:
             summary.columns = ['Range', 'Client Count', 'Total Changes']
             return summary
 
-        st.markdown("#### 5️⃣ Clients with Positive Changes by Range")
-        pos_tbl = structure_grouping(df, is_positive=True)
-        styled_pos = add_separator(pos_tbl, ['Client Count', 'Total Changes'])
-        colgroup_pos = get_colgroup_by_width(styled_pos, ['Client Count', 'Total Changes'])
-        st.markdown(
-            html_table(styled_pos, ['Client Count', 'Total Changes'], colgroup_pos),
-            unsafe_allow_html=True
-        )
-
-        st.markdown("#### 6️⃣ Clients with Negative Changes by Range")
-        neg_tbl = structure_grouping(df, is_positive=False)
-        styled_neg = add_separator(neg_tbl, ['Client Count', 'Total Changes'])
-        colgroup_neg = get_colgroup_by_width(styled_neg, ['Client Count', 'Total Changes'])
-        st.markdown(
-            html_table(styled_neg, ['Client Count', 'Total Changes'], colgroup_neg),
-            unsafe_allow_html=True
-        )
+            # 🔽 Insert once only
+            st.markdown("#### 5️⃣ Clients with Positive Changes by Range")
+            pos_tbl = structure_grouping(df, is_positive=True)
+            styled_pos = add_separator(pos_tbl, ['Client Count', 'Total Changes'])
+            colgroup_pos = get_colgroup_by_width(styled_pos, ['Client Count', 'Total Changes'])
+            st.markdown(
+                html_table(styled_pos, ['Client Count', 'Total Changes'], colgroup_pos),
+                unsafe_allow_html=True
+            )
+            
+            st.markdown("#### 6️⃣ Clients with Negative Changes by Range")
+            neg_tbl = structure_grouping(df, is_positive=False)
+            styled_neg = add_separator(neg_tbl, ['Client Count', 'Total Changes'])
+            colgroup_neg = get_colgroup_by_width(styled_neg, ['Client Count', 'Total Changes'])
+            st.markdown(
+                html_table(styled_neg, ['Client Count', 'Total Changes'], colgroup_neg),
+                unsafe_allow_html=True
+            )
