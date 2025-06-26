@@ -1,5 +1,3 @@
-# [START: imports and helpers — same as before]
-
 import streamlit as st
 import pandas as pd
 import re
@@ -19,18 +17,28 @@ def extract_date_label(filename):
         return datetime(int(year), int(month), int(day)).strftime("%d %b %Y")
     return filename
 
-def html_table(df, numeric_cols):
+def html_table_with_colgroup(df, numeric_cols, colgroup):
     def make_html(row):
         html = "<tr>"
         for col in df.columns:
             val = row[col]
-            style = "text-align:right;" if col in numeric_cols else ""
+            style = "text-align:right; white-space: nowrap;" if col in numeric_cols else "white-space: nowrap;"
             html += f"<td style='{style} padding:4px 10px'>{val}</td>"
         html += "</tr>"
         return html
-    headers = "".join(f"<th style='text-align:left; padding:4px 10px'>{col}</th>" for col in df.columns)
+
+    headers = "".join(f"<th style='text-align:left; padding:4px 10px; white-space: nowrap;'>{col}</th>" for col in df.columns)
     rows = "\n".join(make_html(row) for _, row in df.iterrows())
-    return f"<table style='border-collapse:collapse; font-size:14px'><thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table>"
+    return f"<table style='border-collapse:collapse; font-size:14px'>{colgroup}<thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table>"
+
+# Consistent column widths and nowrap style
+rank_tab_colgroup_nowrap = """<colgroup>
+<col style='width: 72px; white-space: nowrap;'>
+<col style='width: 72px; white-space: nowrap;'>
+<col style='width: 63px; white-space: nowrap;'>
+<col style='width: 63px; white-space: nowrap;'>
+<col style='width: 225px; white-space: nowrap;'>
+</colgroup>"""
 
 st.set_page_config(page_title="Client Balance Comparison", layout="wide")
 st.title("📊 Client Balance Changes & Rankings")
@@ -123,21 +131,20 @@ if 'final_result_with_total' in st.session_state:
     with tab1:
         st.markdown("#### 1️⃣ IPOT, WM, Others by Fee Type")
         df1 = sum_table(df[df['Group'].isin(['IPOT','WM','Others'])]).rename(columns=colnames)
-        st.markdown(html_table(add_separator(df1, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+        st.markdown(html_table_with_colgroup(add_separator(df1, list(colnames.values())), list(colnames.values()), rank_tab_colgroup_nowrap), unsafe_allow_html=True)
 
         st.markdown("#### 2️⃣ Private Dealing by Fee Type")
         df2 = sum_table(df[df['Group'] == 'Private Dealing']).rename(columns=colnames)
-        st.markdown(html_table(add_separator(df2, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+        st.markdown(html_table_with_colgroup(add_separator(df2, list(colnames.values())), list(colnames.values()), rank_tab_colgroup_nowrap), unsafe_allow_html=True)
 
         st.markdown("#### 3️⃣ Total Seluruh Piutang by Fee Type")
         df3 = total_only(df).rename(columns=colnames)
-        st.markdown(html_table(add_separator(df3, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+        st.markdown(html_table_with_colgroup(add_separator(df3, list(colnames.values())), list(colnames.values()), rank_tab_colgroup_nowrap), unsafe_allow_html=True)
 
         st.markdown("#### 4️⃣ Total by Group Only")
         df4 = total_by_group_only(df).rename(columns=colnames)
-        st.markdown(html_table(add_separator(df4, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
+        st.markdown(html_table_with_colgroup(add_separator(df4, list(colnames.values())), list(colnames.values()), rank_tab_colgroup_nowrap), unsafe_allow_html=True)
 
-    # --- Rank Tabs Logic with Equal Table Widths ---
     masks = {
         'IPOT': df['salesid'] == 'IPOT',
         'WM': df['salesid'].str.startswith('WM', na=False),
@@ -148,25 +155,12 @@ if 'final_result_with_total' in st.session_state:
     for t, name in zip([tab2, tab3, tab4, tab5], masks):
         with t:
             subset = df[masks[name]]
-            tables = [
-                ("Top 20 by Changes", subset.nlargest(20, 'change')),
-                ("Bottom 20 by Changes", subset.nsmallest(20, 'change')),
-                ("Top 20 by Today Value", subset.nlargest(20, 'current_currentbal'))
-            ]
-
-            combined = pd.concat([tbl for _, tbl in tables])
-            max_row_width = combined.apply(lambda row: sum(len(str(v)) * 9 for v in row[['custcode', 'custname', 'salesid', 'change', 'current_currentbal']]), axis=1).max()
-            total_chars = sum(combined[col].astype(str).map(len).max() for col in ['custcode', 'custname', 'salesid', 'change', 'current_currentbal'])
-
-            col_widths = {
-                col: int((combined[col].astype(str).map(len).max() / total_chars) * max_row_width)
-                for col in ['custcode', 'custname', 'salesid', 'change', 'current_currentbal']
-            }
-
-            colgroup = "<colgroup>\n" + "".join(f"<col style='width: {w}px; white-space: nowrap;'>" for w in col_widths.values()) + "</colgroup>"
-
-            for title, df_table in tables:
-                st.markdown(f"#### {title}")
-                df_table = df_table[['custcode', 'custname', 'salesid', 'change', 'current_currentbal']].rename(columns=colnames)
-                styled = add_separator(df_table, list(colnames.values()))
-                st.markdown(colgroup + html_table(styled, list(colnames.values())), unsafe_allow_html=True)
+            for lbl, f in [
+                ('Top 20 by Changes', lambda d: d.nlargest(20, 'change')),
+                ('Bottom 20 by Changes', lambda d: d.nsmallest(20, 'change')),
+                ('Top 20 by Today Value', lambda d: d.nlargest(20, 'current_currentbal'))
+            ]:
+                st.markdown(f"#### {lbl}")
+                dt = f(subset)[['custcode','custname','salesid','change','current_currentbal']].rename(columns=colnames)
+                styled = add_separator(dt, [c for c in colnames.values() if c in dt.columns])
+                st.markdown(html_table_with_colgroup(styled, [c for c in colnames.values() if c in dt.columns], rank_tab_colgroup_nowrap), unsafe_allow_html=True)
