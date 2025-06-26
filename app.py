@@ -105,12 +105,14 @@ if yesterday_file and current_file:
             'change': 'Changes'
         }
 
+        column_config = {col: st.column_config.NumberColumn(align="right") for col in col_rename.values()}
+
         # ---------- MAIN TABLE ----------
         st.markdown("### 🗂️ All Clients — Balance Change Table")
         main_table = final_result_with_total.rename(columns=col_rename)
         st.data_editor(
             add_separator(main_table, list(col_rename.values())),
-            column_config={col: st.column_config.Column(width="fit-content", alignment="right") for col in col_rename.values()},
+            column_config=column_config,
             hide_index=True
         )
         csv = main_table.to_csv(index=False)
@@ -126,7 +128,6 @@ if yesterday_file and current_file:
             "🥇 Rank Others"
         ])
 
-        # --------- ANALYSIS TAB ---------
         with tab1:
             df = final_result.copy()
             df['Fee Type'] = df['int_rate'].apply(lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee')
@@ -188,11 +189,10 @@ if yesterday_file and current_file:
                 st.markdown(f"#### {title}")
                 st.data_editor(
                     add_separator(table, list(col_rename.values())),
-                    column_config={col: st.column_config.Column(width="fit-content", alignment="right") for col in col_rename.values()},
+                    column_config=column_config,
                     hide_index=True
                 )
 
-        # --------- RANKING TABS ---------
         masks = {
             "IPOT": df['salesid'] == 'IPOT',
             "WM": df['salesid'].str.startswith('WM', na=False),
@@ -213,7 +213,7 @@ if yesterday_file and current_file:
                     df_out = data_func(group_df)[cols].rename(columns=col_rename)
                     st.data_editor(
                         add_separator(df_out, list(col_rename.values())),
-                        column_config={col: st.column_config.Column(width="fit-content", alignment="right") for col in col_rename.values()},
+                        column_config=column_config,
                         hide_index=True,
                         use_container_width=True,
                         height=400
