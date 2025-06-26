@@ -7,9 +7,7 @@ def add_separator(df, cols):
     fmt = df.copy()
     for col in cols:
         if col in fmt.columns:
-            fmt[col] = fmt[col].apply(
-                lambda x: '{:,.2f}'.format(x) if pd.notnull(x) else ''
-            )
+            fmt[col] = fmt[col].apply(lambda x: '{:,.2f}'.format(x) if pd.notnull(x) else '')
     return fmt
 
 def extract_date_label(filename):
@@ -24,8 +22,11 @@ def html_table(df, numeric_cols, colgroup=""):
     for _, row in df.reset_index(drop=True).iterrows():
         r = "<tr>"
         for col in df.columns:
-            base = ("text-align:right; white-space: nowrap;" if col in numeric_cols else "white-space: nowrap;")
-            style = base + " font-weight:bold; background-color:#f2f2f2;" if 'TOTAL' in row.values else base
+            base = "text-align:right; white-space: nowrap;" if col in numeric_cols else "white-space: nowrap;"
+            if row.iloc[0] == 'Total' or row.iloc[0] == 'Grand Total':
+                style = base + " font-weight:bold; background-color:#f2f2f2;"
+            else:
+                style = base
             r += f"<td style='{style} padding:4px 10px'>{row[col]}</td>"
         r += "</tr>"
         rows.append(r)
@@ -96,7 +97,7 @@ if file_y and file_c and st.button("🚦 Generate Comparison Table"):
 
         final = merged[['custcode','custname','salesid','bal_y','bal_c','change','int_rate','int_rate_daily']]
         totals = {
-            'custcode':'','custname':'TOTAL','salesid':'',
+            'custcode':'','custname':'Total','salesid':'',
             'bal_y': final['bal_y'].sum(),
             'bal_c': final['bal_c'].sum(),
             'change': final['change'].sum(),
@@ -110,16 +111,20 @@ if 'final_tot' in st.session_state:
     lbl_c = f"Balance as of {extract_date_label(sig_c[0])}"
     colnames = {'bal_y': lbl_y, 'bal_c': lbl_c, 'change': 'Changes'}
 
-    main = st.session_state['final_tot'].rename(columns=colnames)
-    main_display = main[main['custname'] != 'TOTAL']
-    total_row = main[main['custname'] == 'TOTAL']
+    df_all = st.session_state['final'].copy()
+    df_total = pd.DataFrame([{
+        'custcode': '', 'custname': 'Total', 'salesid': '',
+        'bal_y': df_all['bal_y'].sum(),
+        'bal_c': df_all['bal_c'].sum(),
+        'change': df_all['change'].sum(),
+        'int_rate': None, 'int_rate_daily': None
+    }])
 
+    df_all_display = df_all.rename(columns=colnames)
+    total_display = df_total.rename(columns=colnames)
     st.subheader("📋 All Clients Balance Comparison")
-    st.dataframe(add_separator(main_display, list(colnames.values())), use_container_width=True)
-    st.markdown("#### 🔢 Total")
-    styled_total = add_separator(total_row, list(colnames.values()))
-    colgroup_total = get_colgroup_by_width(total_row, list(colnames.values()))
-    st.markdown(html_table(styled_total, list(colnames.values()), colgroup_total), unsafe_allow_html=True)
+    st.dataframe(add_separator(df_all_display, list(colnames.values())), use_container_width=True)
+    st.markdown(html_table(add_separator(total_display, list(colnames.values())), list(colnames.values())), unsafe_allow_html=True)
 
     tab_analysis, *rank_tabs = st.tabs([
         "📊 Analysis", "🥇 IPOT", "🥇 WM", "🥇 Private Dealing", "🥇 Others"
@@ -129,7 +134,6 @@ if 'final_tot' in st.session_state:
     df['Fee Type'] = df['int_rate'].apply(
         lambda x: 'Normal Fee' if pd.notnull(x) and x >= 0.36 else 'Special Fee'
     )
-
     def grp(s):
         if s == 'IPOT': return 'IPOT'
         if isinstance(s, str) and s.startswith('WM'): return 'WM'
