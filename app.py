@@ -41,66 +41,80 @@ def get_colgroup_by_width(df, numeric_cols):
         cg += f"<col style='width:{widths[col]}px; white-space:nowrap;'>"
     return cg + "</colgroup>"
 
-st.set_page_config(page_title="Client Balance Comparison", layout="wide")
-st.title("📊 Client Balance Changes & Rankings")
+st.set_page_config(page_title="Receivables Dashboard", layout="wide")
 
-col_y, col_c = st.columns(2)
-with col_y:
-    file_y = st.file_uploader("Upload YESTERDAY'S file", type="csv", key="y")
-with col_c:
-    file_c = st.file_uploader("Upload TODAY'S file", type="csv", key="c")
+# === SIDEBAR ===
+st.sidebar.title("📑 Menu")
+section = st.sidebar.radio(
+    "Select Section",
+    ["Client Balance Changes & Rankings", "Talangan Piutang"]
+)
 
-def sig(f): return (f.name, f.size, getattr(f,'last_modified',None)) if f else None
-sig_y, sig_c = sig(file_y), sig(file_c)
+if section == "Client Balance Changes & Rankings":
 
-if ('sig_y' in st.session_state and st.session_state['sig_y'] != sig_y) or \
-   ('sig_c' in st.session_state and st.session_state['sig_c'] != sig_c):
-    st.session_state.pop('final', None)
-    st.session_state.pop('total_row', None)
+    st.title("📊 Client Balance Changes & Rankings")
 
-st.session_state['sig_y'], st.session_state['sig_c'] = sig_y, sig_c
+    col_y, col_c = st.columns(2)
+    with col_y:
+        file_y = st.file_uploader("Upload YESTERDAY'S file", type="csv", key="y")
+    with col_c:
+        file_c = st.file_uploader("Upload TODAY'S file", type="csv", key="c")
 
-if file_y and file_c and st.button("🚦 Generate Comparison Table"):
-    with st.spinner("Processing..."):
-        dy = pd.read_csv(file_y, sep="|")
-        dc = pd.read_csv(file_c, sep="|")
+    def sig(f): return (f.name, f.size, getattr(f,'last_modified',None)) if f else None
+    sig_y, sig_c = sig(file_y), sig(file_c)
 
-        y = dy.groupby('custcode', as_index=False).agg({
-            'custname': 'first',
-            'salesid': 'first',
-            'currentbal': 'sum'
-        }).rename(columns={'currentbal': 'bal_y'})
+    if ('sig_y' in st.session_state and st.session_state['sig_y'] != sig_y) or \
+       ('sig_c' in st.session_state and st.session_state['sig_c'] != sig_c):
+        st.session_state.pop('final', None)
+        st.session_state.pop('total_row', None)
 
-        c_agg = {
-            'custname': 'first',
-            'salesid': 'first',
-            'currentbal': 'sum'
-        }
-        if 'int_rate' in dc: c_agg['int_rate'] = 'first'
-        if 'int_rate_daily' in dc: c_agg['int_rate_daily'] = 'first'
+    st.session_state['sig_y'], st.session_state['sig_c'] = sig_y, sig_c
 
-        c = dc.groupby('custcode', as_index=False).agg(c_agg).rename(columns={'currentbal': 'bal_c'})
+    if file_y and file_c and st.button("🚦 Generate Comparison Table"):
+        with st.spinner("Processing..."):
+            dy = pd.read_csv(file_y, sep="|")
+            dc = pd.read_csv(file_c, sep="|")
 
-        merged = pd.merge(y, c, on='custcode', how='outer')
-        merged['custname'] = merged['custname_y'].combine_first(merged['custname_x'])
-        merged['salesid'] = merged['salesid_y'].combine_first(merged['salesid_x'])
-        merged.fillna({'bal_y': 0, 'bal_c': 0}, inplace=True)
-        merged['change'] = merged['bal_c'] - merged['bal_y']
+            y = dy.groupby('custcode', as_index=False).agg({
+                'custname': 'first',
+                'salesid': 'first',
+                'currentbal': 'sum'
+            }).rename(columns={'currentbal': 'bal_y'})
 
-        for col in ('int_rate', 'int_rate_daily'):
-            if col not in merged: merged[col] = None
+            c_agg = {
+                'custname': 'first',
+                'salesid': 'first',
+                'currentbal': 'sum'
+            }
+            if 'int_rate' in dc: c_agg['int_rate'] = 'first'
+            if 'int_rate_daily' in dc: c_agg['int_rate_daily'] = 'first'
 
-        final = merged[['custcode', 'custname', 'salesid', 'bal_y', 'bal_c', 'change', 'int_rate', 'int_rate_daily']]
-        st.session_state['final'] = final
+            c = dc.groupby('custcode', as_index=False).agg(c_agg).rename(columns={'currentbal': 'bal_c'})
 
-        totals = {
-            'custcode': '', 'custname': 'Total', 'salesid': '',
-            'bal_y': final['bal_y'].sum(), 'bal_c': final['bal_c'].sum(), 'change': final['change'].sum(),
-            'int_rate': None, 'int_rate_daily': None
-        }
-        st.session_state['total_row'] = pd.DataFrame([totals])
+            merged = pd.merge(y, c, on='custcode', how='outer')
+            merged['custname'] = merged['custname_y'].combine_first(merged['custname_x'])
+            merged['salesid'] = merged['salesid_y'].combine_first(merged['salesid_x'])
+            merged.fillna({'bal_y': 0, 'bal_c': 0}, inplace=True)
+            merged['change'] = merged['bal_c'] - merged['bal_y']
 
-if 'final' in st.session_state:
+            for col in ('int_rate', 'int_rate_daily'):
+                if col not in merged: merged[col] = None
+
+            final = merged[['custcode', 'custname', 'salesid', 'bal_y', 'bal_c', 'change', 'int_rate', 'int_rate_daily']]
+            st.session_state['final'] = final
+
+            totals = {
+                'custcode': '', 'custname': 'Total', 'salesid': '',
+                'bal_y': final['bal_y'].sum(), 'bal_c': final['bal_c'].sum(), 'change': final['change'].sum(),
+                'int_rate': None, 'int_rate_daily': None
+            }
+            st.session_state['total_row'] = pd.DataFrame([totals])
+
+elif section == "Talangan Piutang":
+    st.title("💰 Talangan Piutang")
+    st.info("This module will handle advance receivables. Coming soon!")
+
+if section == "Client Balance Changes & Rankings" and 'final' in st.session_state:
     lbl_y = f"Balance as of {extract_date_label(sig_y[0])}"
     lbl_c = f"Balance as of {extract_date_label(sig_c[0])}"
     colnames = {'bal_y': lbl_y, 'bal_c': lbl_c, 'change': 'Changes'}
