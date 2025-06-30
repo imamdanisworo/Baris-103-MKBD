@@ -201,6 +201,39 @@ if 'final' in st.session_state:
                 unsafe_allow_html=True
             )
 
-        # Positive / Negative range sections remain unchanged
+        st.markdown("#### 5️⃣ Clients with Positive Changes by Range")
+        pos_tbl = structure_grouping(df, is_positive=True)
+        pos_total = pd.DataFrame([{
+            'Range': 'Total',
+            'Client Count': pos_tbl['Client Count'].sum(),
+            'Total Changes': pos_tbl['Total Changes'].sum()
+        }])
+        styled_pos = add_separator(pd.concat([pos_tbl, pos_total], ignore_index=True), ['Client Count', 'Total Changes'])
+        colgroup_pos = get_colgroup_by_width(styled_pos, ['Client Count', 'Total Changes'])
+        st.markdown(html_table(styled_pos, ['Client Count', 'Total Changes'], colgroup_pos), unsafe_allow_html=True)
 
-    # Ranking tabs remain unchanged
+        st.markdown("#### 6️⃣ Clients with Negative Changes by Range")
+        neg_tbl = structure_grouping(df, is_positive=False)
+        neg_total = pd.DataFrame([{
+            'Range': 'Total',
+            'Client Count': neg_tbl['Client Count'].sum(),
+            'Total Changes': neg_tbl['Total Changes'].sum()
+        }])
+        styled_neg = add_separator(pd.concat([neg_tbl, neg_total], ignore_index=True), ['Client Count', 'Total Changes'])
+        colgroup_neg = get_colgroup_by_width(styled_neg, ['Client Count', 'Total Changes'])
+        st.markdown(html_table(styled_neg, ['Client Count', 'Total Changes'], colgroup_neg), unsafe_allow_html=True)
+
+    for tab, group in zip(rank_tabs, ['IPOT', 'WM', 'Private Dealing', 'Others']):
+        with tab:
+            sub = df[df['Group'] == group]
+            tables = [
+                ("Top 20 by Changes", sub.nlargest(20, 'change')),
+                ("Bottom 20 by Changes", sub.nsmallest(20, 'change')),
+                ("Top 20 by Today Value", sub.nlargest(20, 'bal_c')),
+            ]
+            colgroup = get_colgroup_by_width(sub, list(colnames.values()))
+            for title, df_subset in tables:
+                st.markdown(f"#### {title}")
+                display = df_subset[['custcode', 'custname', 'salesid', 'change', 'bal_c']].rename(columns=colnames)
+                styled = add_separator(display, list(colnames.values()))
+                st.markdown(html_table(styled, list(colnames.values()), colgroup), unsafe_allow_html=True)
