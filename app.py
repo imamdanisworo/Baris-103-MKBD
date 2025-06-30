@@ -185,6 +185,26 @@ if 'final' in st.session_state:
         }])
         return pd.concat([s, g], ignore_index=True)
 
+    def structure_grouping(df, is_positive=True):
+        if is_positive:
+            data = df[df['change'] > 0].copy()
+            data['Group Range'] = pd.cut(
+                data['change'],
+                bins=[0, 500_000_000, 1_000_000_000, float('inf')],
+                labels=["< 500 Mio", "500 Mio - 1 Bio", "> 1 Bio"]
+            )
+        else:
+            data = df[df['change'] < 0].copy()
+            data['abs_change'] = data['change'].abs()
+            data['Group Range'] = pd.cut(
+                data['abs_change'],
+                bins=[0, 500_000_000, 1_000_000_000, float('inf')],
+                labels=["< 500 Mio", "500 Mio - 1 Bio", "> 1 Bio"]
+            )
+        summary = data.groupby('Group Range', observed=True)['change'].agg(['count', 'sum']).reset_index()
+        summary.columns = ['Range', 'Client Count', 'Total Changes']
+        return summary
+
     with tab_analysis:
         for title, tbl in [
             ("1️⃣ IPOT, WM, Others by Fee Type", sum_table(df[df['Group'].isin(['IPOT', 'WM', 'Others'])])),
