@@ -170,7 +170,7 @@ if 'final' in st.session_state:
         for title, tbl in [
             ("1️⃣ IPOT, WM, Others by Fee Type", sum_table(df[df['Group'].isin(['IPOT', 'WM', 'Others'])])),
             ("2️⃣ Private Dealing by Fee Type", sum_table(df[df['Group'] == 'Private Dealing'])),
-            ("3️⃣ Total Seluruh Piutang by Fee Type", total_only(df)),
+            ("3️⃣ All Receivable's Amount by Fee Type", total_only(df)),
             ("4️⃣ Total by Group Only", total_by_group(df))
         ]:
             st.markdown(f"#### {title}")
